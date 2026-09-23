@@ -1,0 +1,11 @@
+# Workspace artefacts
+web/node_modules/
+web/.next/
+web/coverage/
+web/.env*
+web/.vercel/
+
+# System and editor files
+.DS_Store
+Thumbs.db
+*.log

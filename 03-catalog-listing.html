@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ro"><head><meta charset="utf-8"><title>Sistem de frânare — NAA.md</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css"></head><body>
+
+<header class="header">
+  <div class="container">
+    <a href="#" class="logo">NAA<span class="dot">.md</span></a>
+    <div class="search-header"><input placeholder="Caută după cod piesă, model, sau categorie…"/><svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div>
+    <a class="icon-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Contul meu</a>
+    <a class="icon-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Favorite</a>
+    <a class="icon-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>Coş <span class="badge">2</span></a>
+    <div class="phone-block"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><div><div class="num">+373 68 123 456</div><div class="hours">Luni - Sâmbătă&nbsp;&nbsp;09:00 - 18:00</div></div></div>
+  </div>
+</header>
+
+<div class="page">
+  <div class="container">
+    <!-- SIDEBAR: filters -->
+    <aside class="side-cats" style="padding: 20px;">
+      <h3 style="font-size:18px; font-weight:700; color:var(--text); margin:0 0 20px; letter-spacing:-0.02em;">Filtre</h3>
+
+      <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); margin-bottom:12px;">Marca</div>
+      <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:24px; font-size:14px;">
+        <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox"> Mercedes-Benz <span style="margin-left:auto; color:var(--text-muted); font-size:12px;">247</span></label>
+        <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox"> Bosch <span style="margin-left:auto; color:var(--text-muted); font-size:12px;">89</span></label>
+        <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox"> Brembo <span style="margin-left:auto; color:var(--text-muted); font-size:12px;">64</span></label>
+        <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox"> ATE <span style="margin-left:auto; color:var(--text-muted); font-size:12px;">42</span></label>
+        <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox"> TRW <span style="margin-left:auto; color:var(--text-muted); font-size:12px;">31</span></label>
+      </div>
+
+      <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); margin-bottom:12px;">Preţ (L.)</div>
+      <div style="display:flex; gap:8px; font-size:14px; margin-bottom:12px;">
+        <input value="120" style="width:80px; padding:8px 12px; border:1px solid var(--border); border-radius:6px;">
+        <span style="align-self:center;">–</span>
+        <input value="8500" style="width:80px; padding:8px 12px; border:1px solid var(--border); border-radius:6px;">
+      </div>
+      <div style="height:4px; background:var(--border); border-radius:2px; margin:16px 0 8px; position:relative;">
+        <div style="position:absolute; left:0; right:20%; top:0; bottom:0; background:var(--red); border-radius:2px;"></div>
+        <div style="position:absolute; left:0; top:-6px; width:16px; height:16px; background:var(--red); border-radius:999px; border:2px solid #fff; box-shadow:0 2px 4px rgba(0,0,0,.15);"></div>
+        <div style="position:absolute; right:20%; top:-6px; width:16px; height:16px; background:var(--red); border-radius:999px; border:2px solid #fff; box-shadow:0 2px 4px rgba(0,0,0,.15);"></div>
+      </div>
+
+      <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); margin:24px 0 12px;">Model Mercedes</div>
+      <div style="display:flex; flex-direction:column; gap:8px; font-size:14px; margin-bottom:24px;">
+        <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox"> C-Class W204 <span style="margin-left:auto; color:var(--text-muted); font-size:12px;">78</span></label>
+        <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox"> E-Class W212 <span style="margin-left:auto; color:var(--text-muted); font-size:12px;">104</span></label>
+        <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox"> S-Class W222 <span style="margin-left:auto; color:var(--text-muted); font-size:12px;">67</span></label>
+        <label style="display:flex; align-items:center; gap:10px;"><input type="checkbox"> GLE <span style="margin-left:auto; color:var(--text-muted); font-size:12px;">52</span></label>
+      </div>
+
+      <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); margin-bottom:12px;">Disponibilitate</div>
+      <label style="display:flex; align-items:center; gap:10px; font-size:14px; margin-bottom:8px;"><input type="checkbox" checked> În stoc <span style="margin-left:auto; color:var(--text-muted); font-size:12px;">412</span></label>
+      <label style="display:flex; align-items:center; gap:10px; font-size:14px;"><input type="checkbox"> La comandă <span style="margin-left:auto; color:var(--text-muted); font-size:12px;">89</span></label>
+
+      <div style="display:flex; gap:8px; margin-top:24px;">
+        <button class="btn btn-outline" style="flex:1;">Resetează</button>
+        <button class="btn btn-red" style="flex:2;">Aplică</button>
+      </div>
+    </aside>
+
+    <main>
+      <div class="crumbs"><a>Acasă</a><span class="sep">›</span><a>Motor și componente</a><span class="sep">›</span><span>Sistem de frânare</span></div>
+      <h1>Sistem de frânare</h1>
+
+      <!-- Sort toolbar -->
+      <div style="background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg); padding:12px 20px; display:flex; align-items:center; gap:16px; margin-bottom:16px;">
+        <span style="font-size:13px; color:var(--text-muted);">892 produse</span>
+        <div style="margin-left:auto; display:flex; align-items:center; gap:12px;">
+          <span style="font-size:13px; font-weight:500;">Sortează:</span>
+          <select style="padding:8px 12px; font-size:13px; border:1px solid var(--border); border-radius:6px; background:#fff;"><option>Popularitate</option><option>Preţ (min → max)</option><option>Preţ (max → min)</option></select>
+        </div>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><div class="img">🛞<span class="stock-badge">în stoc</span></div><div class="name">Set plăcuţe de frână faţă Brembo P50085</div><div class="sku">SKU: A0004201820</div><div class="price">890 L.</div><button class="btn btn-red btn-block">Adaugă în coş</button></div>
+        <div class="card"><div class="img">🛞<span class="stock-badge">în stoc</span></div><div class="name">Disc frână Bosch BD1250 ventilat 330mm</div><div class="sku">SKU: A0004212512</div><div class="price">1 240 L.</div><button class="btn btn-red btn-block">Adaugă în coş</button></div>
+        <div class="card"><div class="img">🛞<span class="stock-badge">în stoc</span></div><div class="name">Etrier frână spate ATE 24.3403-1706</div><div class="sku">SKU: A2124210081</div><div class="price">3 450 L.</div><button class="btn btn-red btn-block">Adaugă în coş</button></div>
+        <div class="card"><div class="img">🛞<span class="stock-badge">în stoc</span></div><div class="name">Furtun frână faţă TRW PHB562 flexibil</div><div class="sku">SKU: A2044200048</div><div class="price">185 L.</div><button class="btn btn-red btn-block">Adaugă în coş</button></div>
+
+        <div class="card"><div class="img">🛞<span class="stock-badge">în stoc</span></div><div class="name">Set plăcuţe frână spate Textar 2325301</div><div class="sku">SKU: A0044208820</div><div class="price">640 L.</div><button class="btn btn-red btn-block">Adaugă în coş</button></div>
+        <div class="card"><div class="img">🛞<span class="stock-badge">în stoc</span></div><div class="name">Senzor ABS faţă Bosch 0265008076</div><div class="sku">SKU: A2129057500</div><div class="price">720 L.</div><button class="btn btn-red btn-block">Adaugă în coş</button></div>
+        <div class="card"><div class="img">🛞<span class="stock-badge">în stoc</span></div><div class="name">Lichid frână DOT4 Motul 1L high performance</div><div class="sku">SKU: 100950</div><div class="price">180 L.</div><button class="btn btn-red btn-block">Adaugă în coş</button></div>
+        <div class="card"><div class="img">🛞<span class="stock-badge">în stoc</span></div><div class="name">Cablu frână de mână spate stânga Cofle 10.7710</div><div class="sku">SKU: A2044201285</div><div class="price">450 L.</div><button class="btn btn-red btn-block">Adaugă în coş</button></div>
+      </div>
+
+      <!-- Pagination -->
+      <div style="display:flex; justify-content:center; gap:8px; margin-top:32px;">
+        <button style="width:40px; height:40px; background:var(--red); color:#fff; border-radius:8px; font-weight:600;">1</button>
+        <button style="width:40px; height:40px; background:#fff; border:1px solid var(--border); border-radius:8px;">2</button>
+        <button style="width:40px; height:40px; background:#fff; border:1px solid var(--border); border-radius:8px;">3</button>
+        <button style="width:40px; height:40px; background:#fff; border:1px solid var(--border); border-radius:8px;">›</button>
+      </div>
+    </main>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <div class="cols">
+      <div class="brand-col"><a class="logo">NAA<span class="dot" style="color:#fff;">.md</span></a><p>Piese auto originale pentru Mercedes-Benz în Moldova.</p></div>
+      <div class="col"><h4>Companie</h4><a>Despre noi</a><a>Cariere</a><a>Blog</a></div>
+      <div class="col"><h4>Suport</h4><a>Livrare</a><a>Returnare</a><a>Garanţie</a></div>
+      <div class="col contacts"><h4>Contact</h4><div class="phone-big">+373 68 123 456</div><div style="margin-top:8px;">Chişinău, Moldova</div></div>
+    </div>
+    <div class="copy">© 2026 NAA.md</div>
+  </div>
+</footer>
+
+<a class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></a>
+</body></html>

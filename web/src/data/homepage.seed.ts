@@ -1,0 +1,90 @@
+import type { HomepageData, MediaAsset } from "@/domain/catalog";
+
+const productImages: Record<string, MediaAsset> = {
+  "brake-pads": { alt: "Комплект тормозных колодок", url: "/images/products/brake-pads.png" },
+  "oil-filter": { alt: "Масляный фильтр", url: "/images/products/oil-filter.png" },
+  "spark-plugs": { alt: "Комплект свечей зажигания", url: "/images/products/spark-plugs.png" },
+  "brake-disc": { alt: "Вентилируемый тормозной диск", url: "/images/products/brake-disc.png" },
+  battery: { alt: "Автомобильный аккумулятор", url: "/images/products/battery.png" },
+  "air-filter": { alt: "Воздушный фильтр", url: "/images/products/air-filter.png" },
+};
+
+const categoryImages: Record<string, MediaAsset> = {
+  engine: productImages["spark-plugs"],
+  brakes: productImages["brake-disc"],
+  suspension: productImages["brake-pads"],
+  transmission: productImages["oil-filter"],
+  electrical: productImages.battery,
+  cooling: productImages["air-filter"],
+  body: productImages["brake-disc"],
+  interior: productImages["air-filter"],
+  exhaust: productImages["brake-pads"],
+  filters: productImages["oil-filter"],
+  bearings: productImages["brake-disc"],
+  accessories: productImages.battery,
+};
+
+export const homepageSeed: HomepageData = {
+  phone: "+373 68 123 456",
+  hours: "Пн–Сб 09:00–18:00",
+  heroSlides: [
+    {
+      id: "mercedes-catalog-banner",
+      title: "Запчасти для Mercedes-Benz",
+      subtitle: "Качество. Надёжность. Производительность.",
+      ctaLabel: "Каталог Mercedes",
+      ctaHref: "/catalog/mercedes",
+      image: { alt: "Баннер: запчасти для Mercedes-Benz", url: "/images/hero/mercedes-catalog-banner.png" },
+      isEnabled: true,
+      sortOrder: 1,
+    },
+    {
+      id: "mercedes-original-banner",
+      title: "Оригинальные детали Mercedes",
+      subtitle: "Двигатель, трансмиссия и расходники в одном каталоге.",
+      ctaLabel: "Каталог Mercedes",
+      ctaHref: "/catalog/mercedes",
+      image: { alt: "Баннер: оригинальные детали Mercedes", url: "/images/hero/mercedes-original-banner.png" },
+      isEnabled: true,
+      sortOrder: 2,
+    },
+  ],
+  categories: [
+    ["engine", "Двигатель и компоненты", 1248], ["brakes", "Тормозная система", 892], ["suspension", "Подвеска и рулевое управление", 764], ["transmission", "Трансмиссия и коробка передач", 623], ["electrical", "Электрооборудование", 1120], ["cooling", "Охлаждение и отопление", 456], ["body", "Кузов и экстерьер", 456], ["interior", "Интерьер и комфорт", 532], ["exhaust", "Выхлопная система", 387], ["filters", "Фильтры и расходники", 689], ["bearings", "Подшипники и крепёжные элементы", 214], ["accessories", "Аксессуары и тюнинг", 162],
+  ].map(([slug, name, productCount]) => ({ id: `category-${slug}`, slug: String(slug), name: String(name), productCount: Number(productCount), image: categoryImages[String(slug)] ?? productImages["oil-filter"], isVisible: true })),
+  popularProducts: [
+    { id: "pads-w213", sku: "A000-420-91-20", brand: "Mercedes-Benz", name: "Тормозные колодки передние", priceMdl: 1490, priceMode: "fixed", rating: 4.8, reviewCount: 124, image: productImages["brake-pads"] },
+    { id: "filter-om654", sku: "A654-180-01-09", brand: "Mercedes-Benz", name: "Масляный фильтр двигателя", priceMdl: 390, priceMode: "fixed", rating: 4.7, reviewCount: 98, image: productImages["oil-filter"] },
+    { id: "plugs-m274", sku: "A004-159-81-03", brand: "Mercedes-Benz", name: "Комплект свечей зажигания", priceMdl: 720, priceMode: "fixed", rating: 4.9, reviewCount: 312, image: productImages["spark-plugs"] },
+    { id: "disc-w205", sku: "A000-421-20-12", brand: "Mercedes-Benz", name: "Тормозной диск передний", priceMdl: 1680, priceMode: "fixed", rating: 4.8, reviewCount: 176, image: productImages["brake-disc"] },
+    { id: "battery-agm", sku: "A000-982-31-08", brand: "Mercedes-Benz", name: "Аккумулятор AGM 95 Ah", priceMdl: null, priceMode: "on_request", rating: 4.7, reviewCount: 203, image: productImages.battery },
+    { id: "air-filter-om654", sku: "A654-094-00-04", brand: "Mercedes-Benz", name: "Воздушный фильтр", priceMdl: 480, priceMode: "fixed", rating: 4.6, reviewCount: 87, image: productImages["air-filter"] },
+    { id: "strut-w213", sku: "A213-320-44-30", brand: "Mercedes-Benz", name: "Амортизационная стойка передняя", priceMdl: 3850, priceMode: "fixed", rating: 4.8, reviewCount: 64, image: { alt: "Амортизационные стойки", url: "/images/posts/suspension.png" } },
+    { id: "oil-5w30", sku: "MB-229.52-5W30", brand: "Mercedes-Benz", name: "Моторное масло 5W-30, 5 л", priceMdl: 1160, priceMode: "fixed", rating: 4.9, reviewCount: 142, image: { alt: "Моторное масло", url: "/images/posts/oil-change.png" } },
+    { id: "wheel-tire", sku: "245-45-R18", brand: "Mercedes-Benz", name: "Колесо в сборе R18", priceMdl: null, priceMode: "on_request", rating: 4.7, reviewCount: 37, image: { alt: "Автомобильное колесо", url: "/images/posts/tires.png" } },
+    { id: "brake-kit", sku: "A000-420-58-05", brand: "Mercedes-Benz", name: "Комплект тормозных дисков и колодок", priceMdl: 4620, priceMode: "fixed", rating: 4.9, reviewCount: 81, image: { alt: "Тормозной комплект", url: "/images/posts/brake-pads.png" } },
+    { id: "cabin-filter", sku: "A205-835-01-47", brand: "Mercedes-Benz", name: "Фильтр салона угольный", priceMdl: 540, priceMode: "fixed", rating: 4.6, reviewCount: 49, image: productImages["air-filter"] },
+    { id: "ignition-kit", sku: "A004-159-81-03", brand: "Mercedes-Benz", name: "Свечи зажигания, комплект", priceMdl: 720, priceMode: "fixed", rating: 4.9, reviewCount: 312, image: productImages["spark-plugs"] },
+  ],
+  recommendedProducts: [
+    { id: "recommended-strut-w213", sku: "A213-320-44-30", brand: "Mercedes-Benz", name: "Амортизационная стойка передняя", priceMdl: 3850, priceMode: "fixed", rating: 4.8, reviewCount: 64, image: { alt: "Амортизационные стойки", url: "/images/posts/suspension.png" } },
+    { id: "recommended-oil-5w30", sku: "MB-229.52-5W30", brand: "Mercedes-Benz", name: "Моторное масло 5W-30, 5 л", priceMdl: 1160, priceMode: "fixed", rating: 4.9, reviewCount: 142, image: { alt: "Моторное масло", url: "/images/posts/oil-change.png" } },
+    { id: "recommended-wheel-tire", sku: "245-45-R18", brand: "Mercedes-Benz", name: "Колесо в сборе R18", priceMdl: null, priceMode: "on_request", rating: 4.7, reviewCount: 37, image: { alt: "Автомобильное колесо", url: "/images/posts/tires.png" } },
+    { id: "recommended-brake-kit", sku: "A000-420-58-05", brand: "Mercedes-Benz", name: "Комплект тормозных дисков и колодок", priceMdl: 4620, priceMode: "fixed", rating: 4.9, reviewCount: 81, image: { alt: "Тормозной комплект", url: "/images/posts/brake-pads.png" } },
+    { id: "recommended-cabin-filter", sku: "A205-835-01-47", brand: "Mercedes-Benz", name: "Фильтр салона угольный", priceMdl: 540, priceMode: "fixed", rating: 4.6, reviewCount: 49, image: productImages["air-filter"] },
+    { id: "recommended-ignition-kit", sku: "A004-159-81-03", brand: "Mercedes-Benz", name: "Свечи зажигания, комплект", priceMdl: 720, priceMode: "fixed", rating: 4.9, reviewCount: 312, image: productImages["spark-plugs"] },
+    { id: "recommended-battery-agm", sku: "A000-982-31-08", brand: "Mercedes-Benz", name: "Аккумулятор AGM 95 Ah", priceMdl: null, priceMode: "on_request", rating: 4.7, reviewCount: 203, image: productImages.battery },
+    { id: "recommended-filter-om654", sku: "A654-180-01-09", brand: "Mercedes-Benz", name: "Масляный фильтр двигателя", priceMdl: 390, priceMode: "fixed", rating: 4.7, reviewCount: 98, image: productImages["oil-filter"] },
+    { id: "recommended-pads-w213", sku: "A000-420-91-20", brand: "Mercedes-Benz", name: "Тормозные колодки передние", priceMdl: 1490, priceMode: "fixed", rating: 4.8, reviewCount: 124, image: productImages["brake-pads"] },
+    { id: "recommended-disc-w205", sku: "A000-421-20-12", brand: "Mercedes-Benz", name: "Тормозной диск передний", priceMdl: 1680, priceMode: "fixed", rating: 4.8, reviewCount: 176, image: productImages["brake-disc"] },
+    { id: "recommended-air-filter-om654", sku: "A654-094-00-04", brand: "Mercedes-Benz", name: "Воздушный фильтр", priceMdl: 480, priceMode: "fixed", rating: 4.6, reviewCount: 87, image: productImages["air-filter"] },
+    { id: "recommended-plugs-m274", sku: "A004-159-81-03", brand: "Mercedes-Benz", name: "Комплект свечей зажигания", priceMdl: 720, priceMode: "fixed", rating: 4.9, reviewCount: 312, image: productImages["spark-plugs"] },
+  ],
+  posts: [
+    { id: "oil-change", category: "Советы", title: "Как правильно менять масло в двигателе", excerpt: "Что проверить перед заменой и как не ошибиться с расходниками.", publishedAt: "2025-03-12", href: "/media/zamena-masla", image: { alt: "Замена масла в двигателе", url: "/images/posts/oil-change.png" } },
+    { id: "brake-pads", category: "Обзоры", title: "Тормозные колодки: как выбрать и на что обратить внимание", excerpt: "Разбираем основные виды, признаки износа и критерии выбора.", publishedAt: "2025-03-08", href: "/media/tormoznye-kolodki", image: { alt: "Тормозной диск и колодки", url: "/images/posts/brake-pads.png" } },
+    { id: "suspension", category: "Ремонт", title: "Признаки износа подвески и как их вовремя заметить", excerpt: "Симптомы, которые лучше не откладывать до серьёзного ремонта.", publishedAt: "2025-03-03", href: "/media/iznos-podveski", image: { alt: "Стойки подвески", url: "/images/posts/suspension.png" } },
+    { id: "battery", category: "Полезное", title: "Как выбрать аккумулятор для автомобиля", excerpt: "Главные параметры, которые нужно учитывать при покупке.", publishedAt: "2025-02-27", href: "/media/kak-vybrat-akkumulyator", image: { alt: "Автомобильный аккумулятор", url: "/images/posts/battery.png" } },
+    { id: "tires", category: "Рекомендации", title: "Когда пора менять шины: основные признаки", excerpt: "Как определить износ и не попасть в неприятную ситуацию на дороге.", publishedAt: "2025-02-20", href: "/media/kogda-menyat-shiny", image: { alt: "Автомобильные шины", url: "/images/posts/tires.png" } },
+  ],
+};
