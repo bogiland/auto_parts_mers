@@ -1,5 +1,4 @@
 import { CategoryCard } from "@/components/catalog/category-card";
-import { HomeHero } from "@/components/catalog/home-hero";
 import { MostViewedSection } from "@/components/catalog/most-viewed-section";
 import { PostCard } from "@/components/catalog/post-card";
 import { ProductCarousel } from "@/components/catalog/product-carousel";
@@ -7,6 +6,8 @@ import { PromoBanner } from "@/components/catalog/promo-banner";
 import { VehicleSearch } from "@/components/catalog/vehicle-search";
 import { ExpertRequestForm } from "@/components/forms/expert-request-form";
 import { SiteHeader } from "@/components/header/SiteHeader";
+import { DealOfWeek } from "@/components/home/DealOfWeek";
+import { HeroSlider } from "@/components/home/HeroSlider";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SectionHeader } from "@/components/ui/section-header";
 import { categoryPathSlug } from "@/data/directions.seed";
@@ -19,7 +20,10 @@ export default async function HomePage() {
     <>
       <SiteHeader hours={homepage.hours} phone={homepage.phone} />
       <main className="container-site section-stack pt-4 xl:pt-6 pb-12">
-        <HomeHero products={homepage.popularProducts} slides={homepage.heroSlides} />
+        <section aria-label="Подбор запчастей" className="grid min-w-0 gap-4 xl:grid-cols-3">
+          <div className="min-w-0 xl:col-span-2"><HeroSlider slides={homepage.heroSlides} /></div>
+          <DealOfWeek products={homepage.popularProducts} />
+        </section>
         <VehicleSearch />
         <section className="popular-categories">
           <SectionHeader href="/catalog/legkovye" linkText="Все категории" title="Популярные категории" />
