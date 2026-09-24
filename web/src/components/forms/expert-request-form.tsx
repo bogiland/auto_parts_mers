@@ -3,6 +3,8 @@
 import { Headset, Send, Wrench } from "lucide-react";
 import { type FormEvent, useState } from "react";
 
+import { SectionHeader } from "@/components/ui/section-header";
+
 export function ExpertRequestForm() {
   const [submitted, setSubmitted] = useState(false);
 
@@ -12,8 +14,8 @@ export function ExpertRequestForm() {
   }
 
   return (
-    <section className="expert-request" aria-labelledby="expert-request-title">
-      <h2 id="expert-request-title">Сомневаетесь в самостоятельном подборе?</h2>
+    <section className="expert-request">
+      <SectionHeader title="Сомневаетесь в самостоятельном подборе?" />
       <div className="expert-request__body">
         <aside className="expert-request__intro">
           <div aria-hidden="true" className="expert-request__support-icon"><Headset size={34} strokeWidth={1.7} /></div>

@@ -1,15 +1,16 @@
-import { ArrowRight } from "lucide-react";
-
-import { BenefitStrip } from "@/components/catalog/benefit-strip";
 import { CategoryCard } from "@/components/catalog/category-card";
-import { HeroCarousel } from "@/components/catalog/hero-carousel";
+import { HomeHero } from "@/components/catalog/home-hero";
+import { MostViewedSection } from "@/components/catalog/most-viewed-section";
 import { PostCard } from "@/components/catalog/post-card";
 import { ProductCarousel } from "@/components/catalog/product-carousel";
 import { PromoBanner } from "@/components/catalog/promo-banner";
+import { VehicleSearch } from "@/components/catalog/vehicle-search";
 import { ExpertRequestForm } from "@/components/forms/expert-request-form";
 import { SecondaryNav } from "@/components/layout/secondary-nav";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { SectionHeader } from "@/components/ui/section-header";
+import { categoryPathSlug } from "@/data/directions.seed";
 import { getHomepage } from "@/lib/catalog-gateway";
 
 export default async function HomePage() {
@@ -19,34 +20,29 @@ export default async function HomePage() {
     <>
       <SiteHeader hours={homepage.hours} phone={homepage.phone} />
       <SecondaryNav />
-      <main className="page-shell home-page">
-        <div className="home-page__layout">
-          <div className="home-page__main">
-            <HeroCarousel slides={homepage.heroSlides} />
-            <BenefitStrip />
-            <section className="popular-categories" aria-labelledby="popular-title">
-              <div className="section-heading"><h2 id="popular-title">Популярные категории</h2><a href="/catalog">Все категории <ArrowRight size={17} /></a></div>
-              <div className="category-grid">{homepage.categories.map((category) => <CategoryCard category={category} key={category.id} />)}</div>
-            </section>
-            <section className="popular-products" aria-labelledby="products-title">
-              <div className="section-heading"><h2 id="products-title">Популярные товары</h2><a href="/catalog">Смотреть все товары <ArrowRight size={17} /></a></div>
-              <ProductCarousel products={homepage.popularProducts} />
-            </section>
-            <ExpertRequestForm />
-            <section className="recommendations" aria-labelledby="recommendations-title">
-              <div className="section-heading"><h2 id="recommendations-title">Рекомендуем</h2><a href="/catalog">Смотреть все <ArrowRight size={17} /></a></div>
-              <ProductCarousel products={homepage.recommendedProducts} />
-              <div className="promo-grid">
-                <PromoBanner alt="Подбор запчастей по VIN" href="/vin" image="/images/banners/vin-selection-banner.png" />
-                <PromoBanner alt="Автосервис NAA.md" href="/autoservice" image="/images/banners/autoservice-banner.png" />
-              </div>
-            </section>
-            <section className="posts" aria-labelledby="posts-title">
-              <div className="section-heading"><h2 id="posts-title">Наши посты</h2><a href="/media">Смотреть все <ArrowRight size={17} /></a></div>
-              <div className="post-grid">{homepage.posts.slice(0, 4).map((post) => <PostCard post={post} key={post.id} />)}</div>
-            </section>
+      <main className="container-site section-stack pt-4 xl:pt-6 pb-12">
+        <HomeHero products={homepage.popularProducts} slides={homepage.heroSlides} />
+        <VehicleSearch />
+        <section className="popular-categories">
+          <SectionHeader href="/catalog/legkovye" linkText="Все категории" title="Популярные категории" />
+          <div className="category-grid">{homepage.categories.slice(0, 9).map((category) => <CategoryCard category={category} key={category.id} pathSlug={categoryPathSlug(category.slug)} />)}</div>
+        </section>
+        <section className="promo-section" aria-label="Сервисы NAA.md">
+          <div className="promo-grid">
+            <PromoBanner alt="Автосервис NAA.md" href="/autoservice" image="/images/banners/autoservice-banner.png" />
+            <PromoBanner alt="Запчасти и расходники для Mercedes-Benz" eyebrow="Запчасти в наличии" href="/catalog/legkovye" image="/images/hero/mercedes-powertrain-parts.png" title="Расходники для Mercedes" />
           </div>
-        </div>
+        </section>
+        <section className="popular-products">
+          <SectionHeader href="/catalog/legkovye" linkText="Смотреть все товары" title="Популярные товары" />
+          <ProductCarousel products={homepage.popularProducts.slice(0, 9)} />
+        </section>
+        <ExpertRequestForm />
+        <MostViewedSection products={[...homepage.popularProducts, ...homepage.popularProducts].slice(0, 8)} />
+        <section className="posts">
+          <SectionHeader href="/media" linkText="Смотреть все" title="Наши посты" />
+          <div className="post-grid scroller-x" data-scroller>{homepage.posts.slice(0, 4).map((post) => <PostCard post={post} key={post.id} />)}</div>
+        </section>
       </main>
       <SiteFooter />
     </>

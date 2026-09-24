@@ -9,7 +9,7 @@ import { ProductCard } from "./product-card";
 
 function cardsPerPage(width: number) {
   if (width < 600) return 2;
-  if (width < 1024) return 3;
+  if (width < 1024) return 4;
   return 6;
 }
 
@@ -45,8 +45,8 @@ export function ProductCarousel({ products }: { products: Product[] }) {
   }
 
   return (
-    <div className="product-carousel">
-      <div className="product-carousel__viewport" onScroll={(event) => setPage(Math.min(pageCount - 1, Math.round(event.currentTarget.scrollLeft / event.currentTarget.clientWidth)))} ref={viewportRef}>
+    <div className="product-carousel min-w-0">
+      <div className="product-carousel__viewport scroller-x" data-scroller onScroll={(event) => setPage(Math.min(pageCount - 1, Math.round(event.currentTarget.scrollLeft / event.currentTarget.clientWidth)))} ref={viewportRef}>
         <div className="product-carousel__track">{products.map((product) => <ProductCard key={product.id} product={product} />)}</div>
       </div>
       <div className="product-carousel__footer">
