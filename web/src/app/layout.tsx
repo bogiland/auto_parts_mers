@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
-  return <html lang="ru" className={roboto.variable}><body className="min-h-full flex flex-col">{children}</body></html>;
+  return <html lang="ru" className={roboto.variable}><body className="min-h-full pb-tabbar xl:pb-0">{children}</body></html>;
 }

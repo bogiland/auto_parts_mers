@@ -6,8 +6,7 @@ import { ProductCarousel } from "@/components/catalog/product-carousel";
 import { PromoBanner } from "@/components/catalog/promo-banner";
 import { VehicleSearch } from "@/components/catalog/vehicle-search";
 import { ExpertRequestForm } from "@/components/forms/expert-request-form";
-import { SecondaryNav } from "@/components/layout/secondary-nav";
-import { SiteHeader } from "@/components/layout/site-header";
+import { SiteHeader } from "@/components/header/SiteHeader";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SectionHeader } from "@/components/ui/section-header";
 import { categoryPathSlug } from "@/data/directions.seed";
@@ -19,7 +18,6 @@ export default async function HomePage() {
   return (
     <>
       <SiteHeader hours={homepage.hours} phone={homepage.phone} />
-      <SecondaryNav />
       <main className="container-site section-stack pt-4 xl:pt-6 pb-12">
         <HomeHero products={homepage.popularProducts} slides={homepage.heroSlides} />
         <VehicleSearch />
