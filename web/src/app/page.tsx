@@ -2,6 +2,7 @@ import { MostViewedSection } from "@/components/catalog/most-viewed-section";
 import { PostCard } from "@/components/catalog/post-card";
 import { SiteHeader } from "@/components/header/SiteHeader";
 import { DealOfWeek } from "@/components/home/DealOfWeek";
+import { BrandRail } from "@/components/home/BrandRail";
 import { CategoryTabs } from "@/components/home/CategoryTabs";
 import { ExpertMatchTabs } from "@/components/home/ExpertMatchTabs";
 import { HeroSlider } from "@/components/home/HeroSlider";
@@ -10,6 +11,7 @@ import { ProductRail } from "@/components/product/ProductRail";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SectionHeader } from "@/components/ui/section-header";
 import { getHomepage } from "@/lib/catalog-gateway";
+import { BenefitStrip } from "@/components/catalog/benefit-strip";
 
 export default async function HomePage() {
   const homepage = await getHomepage();
@@ -23,7 +25,9 @@ export default async function HomePage() {
           <DealOfWeek products={homepage.popularProducts} />
         </section>
         <ExpertMatchTabs />
+        <BenefitStrip />
         <CategoryTabs />
+        <BrandRail />
         <section aria-label="Сервисы NAA.md"><PromoRail /></section>
         <section className="popular-products">
           <SectionHeader href="/catalog/legkovye" linkText="Смотреть все товары" title="Популярные товары" />
@@ -32,7 +36,7 @@ export default async function HomePage() {
         <MostViewedSection products={[...homepage.popularProducts, ...homepage.popularProducts].slice(0, 8)} />
         <section className="posts">
           <SectionHeader href="/media" linkText="Смотреть все" title="Наши посты" />
-          <div className="post-grid scroller-x" data-scroller>{homepage.posts.slice(0, 4).map((post) => <PostCard post={post} key={post.id} />)}</div>
+          <div className="-mx-4 scroller-x min-w-0 gap-4 px-4 scroll-px-4 md:mx-0 md:grid md:grid-cols-2 md:px-0 xl:grid-cols-4" data-scroller>{homepage.posts.slice(0, 4).map((post) => <div className="min-w-0 shrink-0 basis-[85%] md:basis-auto" key={post.id}><PostCard post={post} /></div>)}</div>
         </section>
       </main>
       <SiteFooter />
