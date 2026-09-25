@@ -1,11 +1,11 @@
 import { MostViewedSection } from "@/components/catalog/most-viewed-section";
 import { PostCard } from "@/components/catalog/post-card";
-import { PromoBanner } from "@/components/catalog/promo-banner";
 import { SiteHeader } from "@/components/header/SiteHeader";
 import { DealOfWeek } from "@/components/home/DealOfWeek";
 import { CategoryTabs } from "@/components/home/CategoryTabs";
 import { ExpertMatchTabs } from "@/components/home/ExpertMatchTabs";
 import { HeroSlider } from "@/components/home/HeroSlider";
+import { PromoRail } from "@/components/home/PromoRail";
 import { ProductRail } from "@/components/product/ProductRail";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SectionHeader } from "@/components/ui/section-header";
@@ -24,12 +24,7 @@ export default async function HomePage() {
         </section>
         <ExpertMatchTabs />
         <CategoryTabs />
-        <section className="promo-section" aria-label="Сервисы NAA.md">
-          <div className="promo-grid">
-            <PromoBanner alt="Автосервис NAA.md" href="/autoservice" image="/images/banners/autoservice-banner.png" />
-            <PromoBanner alt="Запчасти и расходники для Mercedes-Benz" eyebrow="Запчасти в наличии" href="/catalog/legkovye" image="/images/hero/mercedes-powertrain-parts.png" title="Расходники для Mercedes" />
-          </div>
-        </section>
+        <section aria-label="Сервисы NAA.md"><PromoRail /></section>
         <section className="popular-products">
           <SectionHeader href="/catalog/legkovye" linkText="Смотреть все товары" title="Популярные товары" />
           <ProductRail products={homepage.popularProducts.slice(0, 9)} />

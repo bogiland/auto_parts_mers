@@ -4,21 +4,25 @@ import Link from "next/link";
 import type { Product } from "@/domain/catalog";
 
 import { ProductCard } from "@/components/product/ProductCard";
+import { ProductRail } from "@/components/product/ProductRail";
 import { SectionHeader } from "../ui/section-header";
+
+function MaintenancePromo({ compact = false }: { compact?: boolean }) {
+  return <Link className={`relative block min-w-0 overflow-hidden rounded-ui ${compact ? "aspect-[2.3/1]" : "h-full"}`} href="/catalog/legkovye?group=maintenance">
+    <Image alt="Набор расходников для технического обслуживания" className="object-cover" fill sizes={compact ? "(max-width:1199px) 100vw, 435px" : "435px"} src={compact ? "/images/banners/maintenance-kit-wide.png" : "/images/banners/maintenance-kit.png"} />
+    <span className="absolute inset-0 bg-ink/40" />
+    <span className="absolute inset-0 flex flex-col justify-between p-4 text-white"><span className="w-fit rounded-badge bg-accent px-2 py-0.5 text-badge font-bold">Расходники для ТО</span><span><strong className="block text-hero font-bold">Товары<br />для ТО</strong><small className="mt-2 block text-body font-bold">Масла, фильтры и тормозная система</small></span></span>
+  </Link>;
+}
 
 export function MostViewedSection({ products }: { products: Product[] }) {
   return (
-    <section className="most-viewed">
+    <section className="min-w-0">
       <SectionHeader href="/catalog/legkovye" linkText="Смотреть каталог" title="Самые просматриваемые" />
-      <div className="most-viewed__content">
-        <Link className="most-viewed__banner" href="/catalog/legkovye?group=maintenance">
-          <Image alt="Набор расходников для технического обслуживания" className="most-viewed__banner-image most-viewed__banner-image--desktop" fill sizes="435px" src="/images/banners/maintenance-kit.png" />
-          <Image alt="Набор расходников для технического обслуживания" className="most-viewed__banner-image most-viewed__banner-image--compact" fill sizes="(max-width: 1023px) 100vw, 435px" src="/images/banners/maintenance-kit-wide.png" />
-          <span>Расходники для ТО</span>
-          <strong>Товары<br />для ТО</strong>
-          <small>Масла, фильтры и тормозная система</small>
-        </Link>
-        <div className="most-viewed__products">{products.slice(0, 8).map((product, index) => <ProductCard className={`${index > 1 ? "hidden md:flex" : ""} ${index > 3 ? "md:hidden xl:flex" : ""}`} key={product.id} product={product} />)}</div>
+      <div className="xl:hidden"><ProductRail products={products.slice(0, 8)} /><div className="mt-4"><MaintenancePromo compact /></div></div>
+      <div className="hidden min-w-0 grid-cols-3 gap-4 xl:grid">
+        <MaintenancePromo />
+        <div className="col-span-2 grid min-w-0 grid-cols-4 gap-0">{products.slice(0, 8).map((product) => <ProductCard key={product.id} product={product} />)}</div>
       </div>
     </section>
   );
