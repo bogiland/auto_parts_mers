@@ -1,15 +1,14 @@
-import { CategoryCard } from "@/components/catalog/category-card";
 import { MostViewedSection } from "@/components/catalog/most-viewed-section";
 import { PostCard } from "@/components/catalog/post-card";
 import { ProductCarousel } from "@/components/catalog/product-carousel";
 import { PromoBanner } from "@/components/catalog/promo-banner";
 import { SiteHeader } from "@/components/header/SiteHeader";
 import { DealOfWeek } from "@/components/home/DealOfWeek";
+import { CategoryTabs } from "@/components/home/CategoryTabs";
 import { ExpertMatchTabs } from "@/components/home/ExpertMatchTabs";
 import { HeroSlider } from "@/components/home/HeroSlider";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SectionHeader } from "@/components/ui/section-header";
-import { categoryPathSlug } from "@/data/directions.seed";
 import { getHomepage } from "@/lib/catalog-gateway";
 
 export default async function HomePage() {
@@ -24,10 +23,7 @@ export default async function HomePage() {
           <DealOfWeek products={homepage.popularProducts} />
         </section>
         <ExpertMatchTabs />
-        <section className="popular-categories">
-          <SectionHeader href="/catalog/legkovye" linkText="Все категории" title="Популярные категории" />
-          <div className="category-grid">{homepage.categories.slice(0, 9).map((category) => <CategoryCard category={category} key={category.id} pathSlug={categoryPathSlug(category.slug)} />)}</div>
-        </section>
+        <CategoryTabs />
         <section className="promo-section" aria-label="Сервисы NAA.md">
           <div className="promo-grid">
             <PromoBanner alt="Автосервис NAA.md" href="/autoservice" image="/images/banners/autoservice-banner.png" />
