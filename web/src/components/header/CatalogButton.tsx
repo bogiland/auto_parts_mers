@@ -21,10 +21,9 @@ const catalogItems = [
 
 interface CatalogButtonProps {
   mobile?: boolean;
-  navigation?: boolean;
 }
 
-export function CatalogButton({ mobile = false, navigation = false }: CatalogButtonProps) {
+export function CatalogButton({ mobile = false }: CatalogButtonProps) {
   const [isOpen, setOpen] = useState(false);
 
   useEffect(() => {
@@ -38,9 +37,7 @@ export function CatalogButton({ mobile = false, navigation = false }: CatalogBut
 
   const className = mobile
     ? "grid h-10 w-10 shrink-0 place-items-center rounded-ui bg-accent text-white hover:bg-accent-hover"
-    : navigation
-      ? "shrink-0 text-nav font-bold text-white hover:text-accent"
-      : "flex h-control shrink-0 items-center gap-2 rounded-ui bg-accent px-5 text-lead font-bold text-white hover:bg-accent-hover";
+    : "flex h-control shrink-0 items-center gap-2 rounded-ui bg-accent px-5 text-lead font-bold text-white hover:bg-accent-hover";
 
   return (
     <>

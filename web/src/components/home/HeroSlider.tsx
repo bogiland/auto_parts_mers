@@ -41,13 +41,6 @@ export function HeroSlider({ slides }: { slides: HeroSlide[] }) {
         {slides.map((slide) => (
           <Link aria-label={slide.title} className="relative min-w-full snap-start overflow-hidden" href={slide.ctaHref} key={slide.id}>
             <Image alt={slide.image.alt} className="object-cover" fill priority={slide.sortOrder === 1} sizes="(max-width: 1199px) 100vw, 66vw" src={slide.image.url} />
-            <span className="absolute inset-0 flex max-w-full flex-col justify-center p-6 xl:p-10">
-              <span className="max-w-full xl:w-1/2">
-                <strong className="text-hero font-bold uppercase text-ink">{slide.title}</strong>
-                <span className="mt-2 block text-body text-ink-2 xl:text-lead">{slide.subtitle}</span>
-                <span className="mt-4 flex h-10 w-fit items-center rounded-ui bg-accent px-4 text-btn font-bold text-white">Смотреть каталог</span>
-              </span>
-            </span>
           </Link>
         ))}
       </div>

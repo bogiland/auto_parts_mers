@@ -40,7 +40,7 @@ function HeaderAction({ href, icon, label, badge = false }: { href: string; icon
 
 export function SiteHeader({ hours, phone }: SiteHeaderProps) {
   return (
-    <header className="bg-header">
+    <header className="bg-header xl:contents">
       <div className="xl:hidden">
         <div className="container-site flex h-10 items-center justify-between bg-header text-nav font-bold text-white">
           <Link className="flex items-center gap-1" href="/contacts"><MapPin aria-hidden="true" size={16} /><span>Слободзея</span><ChevronDown aria-hidden="true" size={14} /></Link>
@@ -54,7 +54,7 @@ export function SiteHeader({ hours, phone }: SiteHeaderProps) {
         </nav>
       </div>
 
-      <div className="hidden xl:block">
+      <div className="hidden xl:contents">
         <div className="bg-header-top">
           <div className="container-site flex h-11 items-center justify-between py-2 text-nav text-white">
             <div className="flex min-w-0 items-center gap-4">
@@ -64,7 +64,7 @@ export function SiteHeader({ hours, phone }: SiteHeaderProps) {
             <div className="flex shrink-0 items-center gap-4"><a aria-label="Telegram" href="#telegram"><Send aria-hidden="true" size={20} /></a><a aria-label="Viber" href="#viber"><MessageCircle aria-hidden="true" size={20} /></a><a className="text-phone font-bold" href="tel:+37368123456" title={hours}>{phone}</a></div>
           </div>
         </div>
-        <div className="bg-header py-3">
+        <div className="sticky top-0 z-40 bg-header py-3">
           <div className="container-site flex min-w-0 items-center gap-4">
             <Link aria-label="NAA.md, главная" className="shrink-0" href="/"><Image alt="NAA.md" className="h-[22px] w-auto" height={22} priority src="/images/brand/naa-logo.png" width={120} /></Link>
             <CatalogButton />
@@ -73,7 +73,7 @@ export function SiteHeader({ hours, phone }: SiteHeaderProps) {
           </div>
         </div>
         <nav aria-label="Основная навигация" className="h-9 bg-header">
-          <div className="container-site flex h-full items-center justify-between gap-4"><CatalogButton navigation />{desktopNavigation.map(([label, href]) => <Link className={label === "Акции" ? "text-nav font-bold text-sale" : "text-nav text-white hover:text-accent"} href={href} key={label}>{label}</Link>)}</div>
+          <div className="container-site flex h-full items-center justify-between gap-4">{desktopNavigation.map(([label, href]) => <Link className={label === "Акции" ? "text-nav font-bold text-sale" : "text-nav text-white hover:text-accent"} href={href} key={label}>{label}</Link>)}</div>
         </nav>
       </div>
       <MobileTabBar />
