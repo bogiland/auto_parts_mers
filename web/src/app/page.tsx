@@ -1,12 +1,12 @@
 import { MostViewedSection } from "@/components/catalog/most-viewed-section";
 import { PostCard } from "@/components/catalog/post-card";
-import { ProductCarousel } from "@/components/catalog/product-carousel";
 import { PromoBanner } from "@/components/catalog/promo-banner";
 import { SiteHeader } from "@/components/header/SiteHeader";
 import { DealOfWeek } from "@/components/home/DealOfWeek";
 import { CategoryTabs } from "@/components/home/CategoryTabs";
 import { ExpertMatchTabs } from "@/components/home/ExpertMatchTabs";
 import { HeroSlider } from "@/components/home/HeroSlider";
+import { ProductRail } from "@/components/product/ProductRail";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SectionHeader } from "@/components/ui/section-header";
 import { getHomepage } from "@/lib/catalog-gateway";
@@ -32,7 +32,7 @@ export default async function HomePage() {
         </section>
         <section className="popular-products">
           <SectionHeader href="/catalog/legkovye" linkText="Смотреть все товары" title="Популярные товары" />
-          <ProductCarousel products={homepage.popularProducts.slice(0, 9)} />
+          <ProductRail products={homepage.popularProducts.slice(0, 9)} />
         </section>
         <MostViewedSection products={[...homepage.popularProducts, ...homepage.popularProducts].slice(0, 8)} />
         <section className="posts">

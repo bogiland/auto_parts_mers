@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import type { Product } from "@/domain/catalog";
 
-import { ProductCard } from "./product-card";
+import { ProductCard } from "@/components/product/ProductCard";
 import { SectionHeader } from "../ui/section-header";
 
 export function MostViewedSection({ products }: { products: Product[] }) {
@@ -18,7 +18,7 @@ export function MostViewedSection({ products }: { products: Product[] }) {
           <strong>Товары<br />для ТО</strong>
           <small>Масла, фильтры и тормозная система</small>
         </Link>
-        <div className="most-viewed__products">{products.slice(0, 8).map((product) => <ProductCard key={product.id} product={product} />)}</div>
+        <div className="most-viewed__products">{products.slice(0, 8).map((product, index) => <ProductCard className={`${index > 1 ? "hidden md:flex" : ""} ${index > 3 ? "md:hidden xl:flex" : ""}`} key={product.id} product={product} />)}</div>
       </div>
     </section>
   );

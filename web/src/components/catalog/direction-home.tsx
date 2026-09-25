@@ -5,8 +5,8 @@ import { categoriesForDirection, categoryPathSlug, type DirectionHomeDefinition 
 import type { HomepageData } from "@/domain/catalog";
 
 import { CategoryCard } from "./category-card";
-import { ProductCarousel } from "./product-carousel";
 import { SectionHeader } from "../ui/section-header";
+import { ProductRail } from "@/components/product/ProductRail";
 
 export function DirectionHome({ direction, homepage }: { direction: DirectionHomeDefinition; homepage: HomepageData }) {
   const categories = categoriesForDirection(homepage.categories, direction);
@@ -45,7 +45,7 @@ export function DirectionHome({ direction, homepage }: { direction: DirectionHom
         </section>
         <section className="popular-products direction-products">
           <SectionHeader href={`/catalog/${direction.slug}`} linkText="Смотреть каталог" title="Популярное в направлении" />
-          <ProductCarousel products={products} />
+          <ProductRail products={products} />
         </section>
         <section className="direction-seo" aria-labelledby="direction-seo-title">
           <h2 id="direction-seo-title">{direction.name}: ассортимент, подбор и доставка</h2>
