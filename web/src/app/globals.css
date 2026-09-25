@@ -209,33 +209,6 @@ button { cursor: pointer; }
 
 
 
-.site-footer { background: #192831; color: #cad4da; }
-.site-footer__inner { display: grid; gap: 0; grid-template-columns: 1.35fr repeat(3, minmax(0, 0.82fr)) minmax(0, 1.18fr) minmax(0, 0.92fr); min-inline-size: 0; padding-block: 34px 0; }
-.site-footer h2 { color: #f2f6f7; font-size: 15px; font-weight: 700; line-height: 20px; margin: 0 0 18px; }
-.site-footer__brand, .site-footer__links, .site-footer__contacts, .site-footer__socials { min-inline-size: 0; padding-inline: 24px; }
-.site-footer__brand { padding-left: 0; }
-.site-footer__links, .site-footer__contacts, .site-footer__socials { border-left: 1px solid rgba(214, 226, 232, 0.14); }
-.site-footer__logo { color: #f6f9fa; display: inline-block; font-size: 38px; font-weight: 700; line-height: 40px; }
-.site-footer__logo span { color: #e4262e; }
-.site-footer__brand > p { color: #a6b4bd; font-size: 13px; margin: 10px 0 26px; }
-.site-footer__support { align-items: center; border-top: 1px solid rgba(214, 226, 232, 0.14); display: flex; gap: 13px; padding-top: 22px; }
-.site-footer__support > svg { color: #e3ebef; flex: 0 0 auto; }
-.site-footer__support div { display: flex; flex-direction: column; gap: 4px; }
-.site-footer__support strong { color: #e6edf0; font-size: 13px; }
-.site-footer__support span { color: #98a8b2; font-size: 12px; }
-.site-footer__links { display: flex; flex-direction: column; gap: 12px; }
-.site-footer__links a { color: #aebdc6; font-size: 13px; font-weight: 500; line-height: 18px; }
-.site-footer__links a:hover, .site-footer__contacts a:hover { color: white; }
-.site-footer__contacts p { align-items: flex-start; color: #afbec7; display: flex; font-size: 13px; gap: 10px; line-height: 18px; margin: 0 0 13px; }
-.site-footer__contacts svg { color: #e1eaee; flex: 0 0 auto; }
-.site-footer__contacts a { color: inherit; }
-.site-footer__socials p { color: #aab8c1; font-size: 13px; line-height: 18px; margin: 0 0 16px; }
-.site-footer__socials > div { display: flex; gap: 9px; }
-.site-footer__socials a { align-items: center; border: 1px solid rgba(224, 234, 238, 0.35); border-radius: 50%; color: #e6eef1; display: grid; height: 35px; place-items: center; width: 35px; }
-.site-footer__socials a:hover { background: var(--red); border-color: var(--red); color: white; }
-.site-footer__bottom { align-items: center; border-top: 1px solid rgba(214, 226, 232, 0.14); color: #98a8b2; display: flex; font-size: 12px; grid-column: 1 / -1; justify-content: space-between; margin-top: 34px; min-block-size: 66px; min-inline-size: 0; }
-.site-footer__bottom div { display: flex; gap: 20px; }
-.site-footer__bottom a:hover { color: white; }
 
 @media (min-width: 1024px) {
   .direction-selection-grid { grid-template-columns: minmax(0, 1fr) 320px; }
@@ -253,9 +226,6 @@ button { cursor: pointer; }
   .category-card { background: transparent; border: 0; min-block-size: 123px; padding: 0; }
   .category-card__visual { block-size: 97px; max-inline-size: none; }
   .category-card h3 { font-size: 13px; line-height: 18px; }
-  .site-footer__inner { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 28px; }
-  .site-footer__brand { grid-column: 1 / -1; }
-  .site-footer__links:nth-of-type(4), .site-footer__contacts { border-left: 0; }
 }
 
 @media (max-width: 599px) {
@@ -284,12 +254,6 @@ button { cursor: pointer; }
   .category-card__visual { block-size: 66px; max-inline-size: none; }
   .category-card__footer { min-block-size: 44px; padding-inline: 3px; }
   .category-card h3 { font-size: 13px; line-height: 18px; }
-  .site-footer__inner { display: block; padding-top: 28px; }
-  .site-footer__brand, .site-footer__links, .site-footer__contacts, .site-footer__socials { border: 0; padding: 0 0 24px; }
-  .site-footer__brand > p { margin-bottom: 20px; }
-  .site-footer__links { gap: 10px; }
-  .site-footer__bottom { align-items: flex-start; flex-direction: column; gap: 12px; margin-top: 6px; padding-block: 17px; }
-  .site-footer__bottom div { flex-direction: column; gap: 8px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
