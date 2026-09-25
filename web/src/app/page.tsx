@@ -27,13 +27,13 @@ export default async function HomePage() {
         <ExpertMatchTabs />
         <BenefitStrip />
         <CategoryTabs />
-        <BrandRail />
         <section aria-label="Сервисы NAA.md"><PromoRail /></section>
         <section className="popular-products">
           <SectionHeader href="/catalog/legkovye" linkText="Смотреть все товары" title="Популярные товары" />
           <ProductRail products={homepage.popularProducts.slice(0, 9)} />
         </section>
         <MostViewedSection products={[...homepage.popularProducts, ...homepage.popularProducts].slice(0, 8)} />
+        <BrandRail />
         <section className="posts">
           <SectionHeader href="/media" linkText="Смотреть все" title="Наши посты" />
           <div className="-mx-4 scroller-x min-w-0 gap-4 px-4 scroll-px-4 md:mx-0 md:grid md:grid-cols-2 md:px-0 xl:grid-cols-4" data-scroller>{homepage.posts.slice(0, 4).map((post) => <div className="min-w-0 shrink-0 basis-[85%] md:basis-auto" key={post.id}><PostCard post={post} /></div>)}</div>
