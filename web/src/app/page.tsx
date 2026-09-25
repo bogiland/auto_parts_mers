@@ -3,10 +3,9 @@ import { MostViewedSection } from "@/components/catalog/most-viewed-section";
 import { PostCard } from "@/components/catalog/post-card";
 import { ProductCarousel } from "@/components/catalog/product-carousel";
 import { PromoBanner } from "@/components/catalog/promo-banner";
-import { VehicleSearch } from "@/components/catalog/vehicle-search";
-import { ExpertRequestForm } from "@/components/forms/expert-request-form";
 import { SiteHeader } from "@/components/header/SiteHeader";
 import { DealOfWeek } from "@/components/home/DealOfWeek";
+import { ExpertMatchTabs } from "@/components/home/ExpertMatchTabs";
 import { HeroSlider } from "@/components/home/HeroSlider";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SectionHeader } from "@/components/ui/section-header";
@@ -24,7 +23,7 @@ export default async function HomePage() {
           <div className="min-w-0 xl:col-span-2"><HeroSlider slides={homepage.heroSlides} /></div>
           <DealOfWeek products={homepage.popularProducts} />
         </section>
-        <VehicleSearch />
+        <ExpertMatchTabs />
         <section className="popular-categories">
           <SectionHeader href="/catalog/legkovye" linkText="Все категории" title="Популярные категории" />
           <div className="category-grid">{homepage.categories.slice(0, 9).map((category) => <CategoryCard category={category} key={category.id} pathSlug={categoryPathSlug(category.slug)} />)}</div>
@@ -39,7 +38,6 @@ export default async function HomePage() {
           <SectionHeader href="/catalog/legkovye" linkText="Смотреть все товары" title="Популярные товары" />
           <ProductCarousel products={homepage.popularProducts.slice(0, 9)} />
         </section>
-        <ExpertRequestForm />
         <MostViewedSection products={[...homepage.popularProducts, ...homepage.popularProducts].slice(0, 8)} />
         <section className="posts">
           <SectionHeader href="/media" linkText="Смотреть все" title="Наши посты" />
