@@ -1,0 +1,14 @@
+@Naa.Catalog.Api_HostAddress = http://localhost:5079
+
+GET {{Naa.Catalog.Api_HostAddress}}/health
+Accept: application/json
+
+###
+
+GET {{Naa.Catalog.Api_HostAddress}}/api/directions/legkovye/home
+Accept: application/json
+
+###
+
+GET {{Naa.Catalog.Api_HostAddress}}/api/catalog/legkovye/tormoza
+Accept: application/json

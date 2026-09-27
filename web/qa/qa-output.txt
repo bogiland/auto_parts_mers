@@ -1,0 +1,82 @@
+
+> web@0.1.0 qa
+> node qa/responsive-check.mjs
+
+
+=== 360px FAIL: горизонтальный скролл (scrollWidth 426 / viewport 360)
+  вылезают за экран:
+   - div.page-shell right=516 width=516
+   - section.home-hero right=414 width=402
+   - section.vehicle-search right=414 width=402
+   - section.popular-categories right=414 width=402
+   - section.promo-section right=414 width=402
+   - section.popular-products right=414 width=402
+   - section.expert-request right=414 width=402
+   - section.most-viewed right=414 width=402
+   - section.posts right=414 width=402
+  запрещённые веса шрифта: 600, 800
+  дробные размеры/интерлиньяж (не из токенов): 11px/13.75px, 11px/15.4px, 11px/15.62px, 11px/16.5px, 12px/17.04px, 13px/15.6px, 13px/16.9px, 13px/18.46px, 13px/19.5px, 15px/19.8px, 15px/22.5px, 16px/19.2px, 17px/25.5px, 18px/24.3px, 19px/23.75px, 20px/21.6px, 28px/28.56px
+  размеры шрифта на странице: 0px/0px 10px/10px 11px/13.75px 11px/15.4px 11px/15.62px 11px/16.5px 12px/17.04px 12px/18px 13px/15.6px 13px/16.9px 13px/18.46px 13px/19.5px 14px/21px 15px/19.8px 15px/22.5px 16px/19.2px 16px/24px 17px/25.5px 18px/24.3px 18px/27px 19px/23.75px 20px/21.6px 20px/24px 20px/30px 28px/28.56px 38px/38px
+
+=== 390px FAIL: горизонтальный скролл (scrollWidth 426 / viewport 390)
+  вылезают за экран:
+   - div.page-shell right=516 width=516
+   - section.home-hero right=414 width=402
+   - section.vehicle-search right=414 width=402
+   - section.popular-categories right=414 width=402
+   - section.promo-section right=414 width=402
+   - section.popular-products right=414 width=402
+   - section.expert-request right=414 width=402
+   - section.most-viewed right=414 width=402
+   - section.posts right=414 width=402
+  запрещённые веса шрифта: 600, 800
+  дробные размеры/интерлиньяж (не из токенов): 11px/13.75px, 11px/15.4px, 11px/15.62px, 11px/16.5px, 12px/17.04px, 13px/15.6px, 13px/16.9px, 13px/18.46px, 13px/19.5px, 15px/19.8px, 15px/22.5px, 16px/19.2px, 17px/25.5px, 18px/24.3px, 19px/23.75px, 20px/21.6px, 28px/28.56px
+  размеры шрифта на странице: 0px/0px 10px/10px 11px/13.75px 11px/15.4px 11px/15.62px 11px/16.5px 12px/17.04px 12px/18px 13px/15.6px 13px/16.9px 13px/18.46px 13px/19.5px 14px/21px 15px/19.8px 15px/22.5px 16px/19.2px 16px/24px 17px/25.5px 18px/24.3px 18px/27px 19px/23.75px 20px/21.6px 20px/24px 20px/30px 28px/28.56px 38px/38px
+
+=== 768px OK (scrollWidth 768 / viewport 768)
+  вылезают за экран:
+   - a.hero-carousel__slide right=1473 width=726
+   - article.product-card right=930 width=169
+   - article.product-card right=932 width=170
+   - article.product-card right=1117 width=170
+   - article.product-card right=1303 width=170
+   - article.product-card right=1488 width=170
+   - article.product-card right=1674 width=170
+   - article.post-card right=937 width=451
+   - article.post-card right=1404 width=451
+   - article.post-card right=1871 width=451
+  запрещённые веса шрифта: 600, 800
+  дробные размеры/интерлиньяж (не из токенов): 11px/15.4px, 11px/16.5px, 12px/17.04px, 13px/16.9px, 13px/18.46px, 13px/19.5px, 14px/19.88px, 15px/19.8px, 15px/22.5px, 17px/25.5px, 18px/21.6px, 21px/28.35px, 21px/31.5px, 22px/26.4px, 23px/24.84px, 34px/34.68px
+  размеры шрифта на странице: 10px/10px 11px/15.4px 11px/16.5px 12px/17.04px 12px/18px 13px/16.9px 13px/18.46px 13px/19.5px 14px/19.88px 14px/21px 15px/19.8px 15px/22.5px 16px/24px 17px/25.5px 18px/21.6px 20px/30px 21px/28.35px 21px/31.5px 22px/26.4px 23px/24.84px 24px/36px 34px/34.68px 38px/38px
+
+=== 1024px OK (scrollWidth 1024 / viewport 1024)
+  вылезают за экран:
+   - a.hero-carousel__slide right=1039 width=507
+   - article.product-card right=1163 width=149
+   - article.product-card right=1328 width=149
+   - article.product-card right=1493 width=149
+  запрещённые веса шрифта: 600, 800
+  дробные размеры/интерлиньяж (не из токенов): 11px/15.4px, 11px/16.5px, 12px/17.04px, 13px/18.46px, 13px/19.5px, 14px/18.2px, 14px/19.88px, 15px/19.8px, 15px/22.5px, 21px/28.35px, 21px/31.5px, 22px/26.4px, 23px/24.84px, 23px/27.6px, 42px/42.84px
+  размеры шрифта на странице: 10px/10px 11px/15.4px 11px/16.5px 12px/17.04px 12px/18px 13px/18.46px 13px/19.5px 14px/18.2px 14px/19.88px 14px/21px 15px/19.8px 15px/22.5px 16px/24px 18px/27px 20px/30px 21px/28.35px 21px/31.5px 22px/26.4px 23px/24.84px 23px/27.6px 24px/36px 38px/38px 42px/42.84px
+
+=== 1280px OK (scrollWidth 1280 / viewport 1280)
+  вылезают за экран:
+   - a.hero-carousel__slide right=1551 width=763
+   - article.product-card right=1462 width=192
+   - article.product-card right=1669 width=192
+   - article.product-card right=1877 width=192
+  запрещённые веса шрифта: 600, 800
+  дробные размеры/интерлиньяж (не из токенов): 11px/15.4px, 11px/16.5px, 12px/17.04px, 13px/18.46px, 13px/19.5px, 14px/18.2px, 14px/19.88px, 15px/19.8px, 15px/22.5px, 21px/28.35px, 21px/31.5px, 22px/26.4px, 23px/24.84px, 23px/27.6px, 42px/42.84px
+  размеры шрифта на странице: 10px/10px 11px/15.4px 11px/16.5px 12px/17.04px 12px/18px 13px/18.46px 13px/19.5px 14px/18.2px 14px/19.88px 14px/21px 15px/19.8px 15px/22.5px 16px/24px 18px/27px 20px/30px 21px/28.35px 21px/31.5px 22px/26.4px 23px/24.84px 23px/27.6px 24px/36px 38px/38px 42px/42.84px
+
+=== 1440px OK (scrollWidth 1440 / viewport 1440)
+  вылезают за экран:
+   - a.hero-carousel__slide right=1703 width=811
+   - article.product-card right=1574 width=200
+   - article.product-card right=1789 width=200
+   - article.product-card right=2005 width=200
+  запрещённые веса шрифта: 600, 800
+  дробные размеры/интерлиньяж (не из токенов): 11px/15.4px, 11px/16.5px, 12px/17.04px, 13px/18.46px, 13px/19.5px, 14px/18.2px, 14px/19.88px, 15px/19.8px, 15px/22.5px, 21px/28.35px, 21px/31.5px, 22px/26.4px, 23px/24.84px, 23px/27.6px, 42px/42.84px
+  размеры шрифта на странице: 10px/10px 11px/15.4px 11px/16.5px 12px/17.04px 12px/18px 13px/18.46px 13px/19.5px 14px/18.2px 14px/19.88px 14px/21px 15px/19.8px 15px/22.5px 16px/24px 18px/27px 20px/30px 21px/28.35px 21px/31.5px 22px/26.4px 23px/24.84px 23px/27.6px 24px/36px 38px/38px 42px/42.84px
+
+ИТОГ: есть ошибки, см. выше

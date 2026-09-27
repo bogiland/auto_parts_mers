@@ -1,0 +1,20 @@
+[
+  { "slug": "audi", "name": "Audi" },
+  { "slug": "bmw", "name": "BMW" },
+  { "slug": "chevrolet", "name": "Chevrolet" },
+  { "slug": "citroen", "name": "Citroen" },
+  { "slug": "ford", "name": "Ford" },
+  { "slug": "honda", "name": "Honda" },
+  { "slug": "hyundai", "name": "Hyundai" },
+  { "slug": "kia", "name": "Kia" },
+  { "slug": "mazda", "name": "Mazda" },
+  { "slug": "mercedes-benz", "name": "Mercedes-Benz" },
+  { "slug": "mitsubishi", "name": "Mitsubishi" },
+  { "slug": "nissan", "name": "Nissan" },
+  { "slug": "opel", "name": "Opel" },
+  { "slug": "renault", "name": "Renault" },
+  { "slug": "skoda", "name": "Skoda" },
+  { "slug": "toyota", "name": "Toyota" },
+  { "slug": "volkswagen", "name": "Volkswagen" },
+  { "slug": "volvo", "name": "Volvo" }
+]

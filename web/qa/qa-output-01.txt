@@ -1,0 +1,32 @@
+
+> web@0.1.0 qa
+> node qa/responsive-check.mjs
+
+
+=== 360px OK (scrollWidth 360 / viewport 360)
+  запрещённые веса шрифта: 600, 800
+  дробные размеры/интерлиньяж (не из токенов): 11px/13.75px, 11px/15.4px, 11px/15.62px, 11px/16.5px, 12px/17.04px, 13px/15.6px, 13px/16.9px, 13px/18.46px, 13px/19.5px, 15px/19.8px, 15px/22.5px, 16px/19.2px, 17px/25.5px, 20px/21.6px, 28px/28.56px
+  размеры шрифта на странице: 0px/0px 10px/10px 11px/13.75px 11px/15.4px 11px/15.62px 11px/16.5px 12px/17.04px 12px/18px 13px/15.6px 13px/16.9px 13px/18.46px 13px/18px 13px/19.5px 14px/21px 15px/19.8px 15px/22.5px 16px/19.2px 16px/24px 17px/25.5px 18px/26px 20px/21.6px 20px/24px 20px/26px 20px/30px 28px/28.56px 38px/38px
+
+=== 390px OK (scrollWidth 390 / viewport 390)
+  запрещённые веса шрифта: 600, 800
+  дробные размеры/интерлиньяж (не из токенов): 11px/13.75px, 11px/15.4px, 11px/15.62px, 11px/16.5px, 12px/17.04px, 13px/15.6px, 13px/16.9px, 13px/18.46px, 13px/19.5px, 15px/19.8px, 15px/22.5px, 16px/19.2px, 17px/25.5px, 20px/21.6px, 28px/28.56px
+  размеры шрифта на странице: 0px/0px 10px/10px 11px/13.75px 11px/15.4px 11px/15.62px 11px/16.5px 12px/17.04px 12px/18px 13px/15.6px 13px/16.9px 13px/18.46px 13px/18px 13px/19.5px 14px/21px 15px/19.8px 15px/22.5px 16px/19.2px 16px/24px 17px/25.5px 18px/26px 20px/21.6px 20px/24px 20px/26px 20px/30px 28px/28.56px 38px/38px
+
+=== 768px OK (scrollWidth 768 / viewport 768)
+  размеры шрифта на странице: 16px/normal
+
+=== 1024px OK (scrollWidth 1024 / viewport 1024)
+  размеры шрифта на странице: 16px/normal
+
+=== 1280px OK (scrollWidth 1280 / viewport 1280)
+  запрещённые веса шрифта: 600, 800
+  дробные размеры/интерлиньяж (не из токенов): 11px/15.4px, 11px/16.5px, 12px/17.04px, 13px/18.46px, 13px/19.5px, 14px/18.2px, 14px/19.88px, 15px/19.8px, 15px/22.5px, 22px/26.4px, 23px/24.84px, 23px/27.6px, 42px/42.84px
+  размеры шрифта на странице: 10px/10px 11px/15.4px 11px/16.5px 12px/17.04px 12px/18px 13px/18.46px 13px/19.5px 14px/18.2px 14px/19.88px 14px/20px 14px/21px 15px/19.8px 15px/22.5px 16px/24px 18px/27px 20px/30px 22px/26.4px 23px/24.84px 23px/27.6px 24px/32px 38px/38px 42px/42.84px
+
+=== 1440px OK (scrollWidth 1440 / viewport 1440)
+  запрещённые веса шрифта: 600, 800
+  дробные размеры/интерлиньяж (не из токенов): 11px/15.4px, 11px/16.5px, 12px/17.04px, 13px/18.46px, 13px/19.5px, 14px/18.2px, 14px/19.88px, 15px/19.8px, 15px/22.5px, 22px/26.4px, 23px/24.84px, 23px/27.6px, 42px/42.84px
+  размеры шрифта на странице: 10px/10px 11px/15.4px 11px/16.5px 12px/17.04px 12px/18px 13px/18.46px 13px/19.5px 14px/18.2px 14px/19.88px 14px/20px 14px/21px 15px/19.8px 15px/22.5px 16px/24px 18px/27px 20px/30px 22px/26.4px 23px/24.84px 23px/27.6px 24px/32px 38px/38px 42px/42.84px
+
+ИТОГ: есть ошибки, см. выше

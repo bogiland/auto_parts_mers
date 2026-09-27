@@ -17,20 +17,20 @@ export default async function HomePage() {
   return (
     <>
       <SiteHeader hours={homepage.hours} phone={homepage.phone} />
-      <main className="container-site section-stack pt-4 xl:pt-6 pb-12">
-        <section aria-label="Подбор запчастей" className="grid min-w-0 gap-4 xl:grid-cols-3">
-          <div className="min-w-0 xl:col-span-2"><HeroSlider slides={homepage.heroSlides} /></div>
-          <DealOfWeek products={homepage.popularProducts} />
+      <main className="container-site section-stack">
+        <section aria-label="Подбор запчастей" className="hero-layout min-w-0 flex flex-col gap-4 desktop:flex-row">
+          <div className="hero-banner-column min-w-0"><HeroSlider slides={homepage.heroSlides} /></div>
+          <div className="deal-week-column min-w-0"><DealOfWeek products={homepage.popularProducts} /></div>
         </section>
         <ExpertMatchTabs />
         <CategoryTabs />
-        <section aria-label="Сервисы NAA.md"><PromoRail /></section>
         <section className="popular-products">
           <SectionHeader href="/catalog/legkovye" linkText="Смотреть все товары" title="Популярные товары" />
           <ProductRail products={homepage.popularProducts.slice(0, 9)} />
         </section>
         <MostViewedSection products={[...homepage.popularProducts, ...homepage.popularProducts].slice(0, 8)} />
         <BrandRail />
+        <section aria-label="Сервисы NAA.md"><PromoRail /></section>
       </main>
       <SiteFooter />
     </>

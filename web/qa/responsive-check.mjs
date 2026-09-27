@@ -16,7 +16,8 @@ for (const width of widths) {
     isMobile: mobile,
     hasTouch: mobile,
   });
-  await page.goto(url, { waitUntil: "networkidle" });
+  await page.goto(url, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(300);
 
   await page.evaluate(async () => {
     for (let y = 0; y < document.body.scrollHeight; y += 600) {

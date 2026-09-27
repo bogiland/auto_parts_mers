@@ -19,10 +19,10 @@ export function MostViewedSection({ products }: { products: Product[] }) {
   return (
     <section className="min-w-0">
       <SectionHeader href="/catalog/legkovye" linkText="Смотреть каталог" title="Самые просматриваемые" />
-      <div className="xl:hidden"><ProductRail products={products.slice(0, 8)} /><div className="mt-4"><MaintenancePromo compact /></div></div>
-      <div className="hidden min-w-0 grid-cols-3 gap-4 xl:grid">
+      <div className="desktop:hidden"><MaintenancePromo compact /><div className="mt-4"><ProductRail products={products.slice(0, 8)} /></div></div>
+      <div className="hidden min-w-0 grid-cols-4 gap-4 desktop:grid">
         <MaintenancePromo />
-        <div className="col-span-2 grid min-w-0 grid-cols-4 gap-0">{products.slice(0, 8).map((product) => <ProductCard key={product.id} product={product} />)}</div>
+        <div className="col-span-3 grid min-w-0 grid-cols-4 gap-4">{products.slice(0, 8).map((product) => <ProductCard key={product.id} product={product} />)}</div>
       </div>
     </section>
   );

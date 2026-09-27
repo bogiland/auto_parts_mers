@@ -1,13 +1,15 @@
-import { Heart } from "lucide-react";
+"use client";
+
+import { Check, Heart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 
 import type { Product } from "@/domain/catalog";
 
 type ProductCardProps = {
   product: Product;
   discount?: boolean;
-  variant?: "default" | "featured";
   className?: string;
 };
 
@@ -16,38 +18,40 @@ function priceLabel(product: Product) {
 }
 
 function oldPriceLabel(product: Product, discount: boolean) {
-  return discount && product.priceMode === "fixed" && product.priceMdl ? `${Math.round(product.priceMdl / 0.7).toLocaleString("ru-RU")} L.` : null;
+  return discount && product.priceMode === "fixed" && product.priceMdl
+    ? `${Math.round(product.priceMdl / 0.7).toLocaleString("ru-RU")} L.`
+    : null;
 }
 
-function ProductImage({ product, discount, featured = false }: Pick<ProductCardProps, "product" | "discount"> & { featured?: boolean }) {
-  return (
-    <div className={`relative overflow-hidden rounded-ui ${featured ? "h-40 w-40 shrink-0" : "aspect-[188/122]"}`}>
-      <Link aria-label={product.name} className="absolute inset-0" href={`/products/${product.id}`}><Image alt={product.image.alt} className="object-contain" fill sizes="(min-width:1200px) 220px, (min-width:768px) 33vw, 50vw" src={product.image.url} /></Link>
-      <button aria-label={`Добавить ${product.name} в избранное`} className="absolute right-0 top-0 grid h-6 w-6 place-items-center text-muted hover:text-accent" type="button"><Heart aria-hidden="true" size={20} strokeWidth={1.7} /></button>
-      {discount ? <span className="absolute bottom-1 left-0 rounded-badge bg-deal px-1.5 text-badge font-bold text-white">-30%</span> : null}
-    </div>
-  );
-}
-
-function ProductDetails({ product, discount }: Pick<ProductCardProps, "product" | "discount">) {
-  const oldPrice = oldPriceLabel(product, Boolean(discount));
+export function ProductCard({ className = "", discount = false, product }: ProductCardProps) {
+  const [isFavourite, setIsFavourite] = useState(false);
+  const [isInCart, setIsInCart] = useState(false);
+  const oldPrice = oldPriceLabel(product, discount);
   const isFixedPrice = product.priceMode === "fixed" && product.priceMdl;
+  const images = product.images?.length ? product.images : [product.image];
+  const image = images[0]!;
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col">
-      <p className={`mt-2 text-price font-bold ${discount && isFixedPrice ? "text-deal" : "text-ink"}`}>{priceLabel(product)}{oldPrice ? <span className="ml-2 text-body font-medium text-muted line-through">{oldPrice}</span> : null}</p>
+    <article className={`flex h-full min-w-0 flex-col rounded-ui bg-white p-3 transition-shadow hover:shadow-card-hover ${className}`}>
+      <div className="relative aspect-square min-w-0">
+        <Link aria-label={product.name} className="absolute inset-0" href={`/products/${product.id}`}>
+          <Image alt={image.alt} className="object-contain" fill sizes="(min-width: 1200px) 16.666vw, (min-width: 768px) 33.333vw, 50vw" src={image.url} />
+        </Link>
+        <button aria-label={isFavourite ? `Убрать ${product.name} из избранного` : `Добавить ${product.name} в избранное`} className={`absolute right-0 top-0 grid h-6 w-6 place-items-center ${isFavourite ? "text-accent" : "text-ink-3 hover:text-accent"}`} onClick={() => setIsFavourite((current) => !current)} type="button">
+          <Heart aria-hidden="true" fill={isFavourite ? "currentColor" : "none"} size={20} strokeWidth={1.7} />
+        </button>
+        {discount ? <span className="absolute bottom-0 left-0 rounded-badge bg-accent px-1.5 text-badge font-bold text-white">-9%</span> : null}
+        {images.length > 1 ? <div aria-label={`Фотография 1 из ${images.length}`} className="absolute bottom-0 left-1/2 flex -translate-x-1/2 gap-1"><span className="h-1 w-1 rounded-full bg-accent" />{images.slice(1).map((entry) => <span className="h-1 w-1 rounded-full bg-line" key={entry.url} />)}</div> : null}
+      </div>
+      <p className={`mt-2 whitespace-nowrap text-price font-bold ${discount && isFixedPrice ? "text-accent" : "text-ink"}`}>{priceLabel(product)}{oldPrice ? <span className="ml-2 text-meta font-normal text-ink-3 line-through">{oldPrice}</span> : null}</p>
       <p className="mt-1 truncate text-meta text-ink-2">{product.brand} · {product.sku}</p>
-      <h3 className="mt-1 line-clamp-2 min-h-[calc(var(--lh-body)*2)] text-body font-bold text-ink">{product.name}</h3>
-      <div className="mt-auto pt-3"><button className={`h-btn w-full rounded-ui text-btn font-bold ${isFixedPrice ? "bg-accent text-white hover:bg-accent-hover" : "border border-accent bg-white text-accent hover:bg-surface-2"}`} type="button">{isFixedPrice ? "В корзину" : "Узнать цену"}</button></div>
-      <p className="mt-2 text-center text-body text-ink-2">Доставка от <span className="font-bold">1 дня</span></p>
-    </div>
+      <h3 className="mt-1 line-clamp-2 min-h-10 text-nav font-bold text-ink">{product.name}</h3>
+      <div className="mt-auto pt-2">
+        <button className={`flex h-9 w-full items-center justify-center gap-1 rounded-ui text-btn font-bold ${isInCart ? "border border-accent bg-white text-accent" : isFixedPrice ? "bg-accent text-white hover:bg-accent-hover" : "border border-accent bg-white text-accent hover:bg-surface-2"}`} onClick={() => isFixedPrice && setIsInCart((current) => !current)} type="button">
+          {isInCart ? <><span>В корзине</span><Check aria-hidden="true" size={16} /></> : isFixedPrice ? "В корзину" : "Узнать цену"}
+        </button>
+      </div>
+      <p className="mt-2 text-center text-meta text-ink-2">сегодня в 13:30</p>
+    </article>
   );
-}
-
-export function ProductCard({ className = "", discount = false, product, variant = "default" }: ProductCardProps) {
-  if (variant === "featured") {
-    return <article className={`flex h-full min-w-0 items-center gap-4 rounded-ui bg-white ${className}`}><ProductImage discount={discount} featured product={product} /><ProductDetails discount={discount} product={product} /></article>;
-  }
-
-  return <article className={`flex h-full min-w-0 flex-col card-pad rounded-ui bg-white shadow-card xl:shadow-none xl:hover:shadow-card ${className}`}><ProductImage discount={discount} product={product} /><ProductDetails discount={discount} product={product} /></article>;
 }

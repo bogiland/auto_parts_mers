@@ -57,6 +57,7 @@ export interface Product {
   rating: number;
   reviewCount: number;
   image: MediaAsset;
+  images?: MediaAsset[];
 }
 
 export interface Brand {

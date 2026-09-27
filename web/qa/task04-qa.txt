@@ -1,0 +1,20 @@
+
+> web@0.1.0 qa
+> node qa/responsive-check.mjs
+
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.goto: Timeout 30000ms exceeded.
+Call log:
+[2m  - navigating to "http://localhost:3000/", waiting until "networkidle"[22m
+
+    at C:\Users\ZEPHYRUS\Downloads\NAA.md\web\qa\responsive-check.mjs:19:14 {
+  log: [
+    '  - navigating to "http://localhost:3000/", waiting until "networkidle"'
+  ],
+  name: 'TimeoutError'
+}
+
+Node.js v25.7.0

@@ -36,8 +36,8 @@ export function CatalogButton({ mobile = false }: CatalogButtonProps) {
   }, []);
 
   const className = mobile
-    ? "grid h-10 w-10 shrink-0 place-items-center rounded-ui bg-accent text-white hover:bg-accent-hover"
-    : "flex h-control shrink-0 items-center gap-2 rounded-ui bg-accent px-5 text-lead font-bold text-white hover:bg-accent-hover";
+    ? "grid h-10 w-10 shrink-0 place-items-center rounded-ui text-white hover:bg-white/10"
+    : "flex h-control shrink-0 items-center gap-2 rounded-ui bg-accent px-4 text-btn font-bold text-white hover:bg-accent-hover";
 
   return (
     <>
@@ -54,7 +54,7 @@ export function CatalogButton({ mobile = false }: CatalogButtonProps) {
               <button aria-label="Закрыть каталог" className="grid h-10 w-10 place-items-center text-ink-2 hover:text-accent" onClick={() => setOpen(false)} type="button"><X size={20} /></button>
             </div>
             <nav className="min-w-0 flex-1 overflow-y-auto py-2" aria-label="Категории каталога">
-              {catalogItems.map(([label, href]) => <Link className="flex min-w-0 items-center justify-between gap-3 px-4 py-3 text-body font-bold text-ink-2 hover:bg-surface-2 hover:text-ink" href={href} key={href} onClick={() => setOpen(false)}><span>{label}</span><ChevronRight aria-hidden="true" className="shrink-0 text-muted-2" size={16} /></Link>)}
+              {catalogItems.map(([label, href]) => <Link className="flex min-w-0 items-center justify-between gap-3 px-4 py-3 text-body font-bold text-ink-2 hover:bg-surface-2 hover:text-ink" href={href} key={href} onClick={() => setOpen(false)}><span>{label}</span><ChevronRight aria-hidden="true" className="shrink-0 text-ink-2" size={16} /></Link>)}
             </nav>
             <Link className="border-t border-line px-4 py-4 text-meta font-bold text-ink hover:bg-surface-2" href="/catalog/legkovye" onClick={() => setOpen(false)}>Оригинальные детали Mercedes-Benz</Link>
           </section>
