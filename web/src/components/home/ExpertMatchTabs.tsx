@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { type FormEvent, useState } from "react";
 
 import { PhoneInput } from "@/components/forms/PhoneInput";
@@ -15,20 +16,29 @@ export function ExpertMatchTabs() {
   const [phoneValid, setPhoneValid] = useState(false);
   const [showPhoneError, setShowPhoneError] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [sending, setSending] = useState(false);
   const [model, setModel] = useState("");
   const [body, setBody] = useState("");
   const [year, setYear] = useState("");
   const [engine, setEngine] = useState("");
 
-  function submitExpertRequest(event: FormEvent<HTMLFormElement>) {
+  async function submitExpertRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setShowPhoneError(true);
-    if (!phoneValid) return;
-    setSubmitted(true);
+    if (!phoneValid || sending) return;
+    const form = new FormData(event.currentTarget);
+    setSending(true); setSubmitError("");
+    try {
+      const response = await fetch("/api/inquiries", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone, part: form.get("part"), vehicle: form.get("vehicle"), source: "expert" }) });
+      if (!response.ok) { setSubmitError((await response.json().catch(() => ({}))).message ?? "Не удалось отправить заявку."); return; }
+      setSubmitted(true);
+    } catch { setSubmitError("Нет связи с сервером. Повторите попытку."); }
+    finally { setSending(false); }
   }
 
   return (
-    <section aria-labelledby="expert-match-title" className="min-w-0">
+    <section aria-labelledby="expert-match-title" className="min-w-0" id="expert-request">
       <SectionTitle id="expert-match-title" mobileChildren="Не уверены в подборе? Эксперт поможет бесплатно">Сомневаетесь в самостоятельном подборе? Эксперт подберёт запчасти бесплатно</SectionTitle>
       <div className="flex items-end" role="tablist" aria-label="Способ подбора запчастей">
         <button aria-controls="expert-panel" aria-selected={activeTab === "expert"} className={`rounded-t-ui px-3 py-3 text-nav font-bold ${activeTab === "expert" ? "bg-surface-2 text-ink" : "text-ink-2 hover:text-ink"}`} id="expert-tab" onClick={() => setActiveTab("expert")} role="tab" type="button">Помощь эксперта</button>
@@ -37,16 +47,17 @@ export function ExpertMatchTabs() {
       <div className={`min-w-0 rounded-ui bg-surface-2 p-4 ${activeTab === "expert" ? "rounded-tl-none" : ""}`}>
         {activeTab === "expert" ? (
           <div aria-labelledby="expert-tab" id="expert-panel" role="tabpanel">
-            {submitted ? <p className="text-body text-ink-2">Заявка принята. Эксперт скоро свяжется с вами.</p> : (
+            {submitted ? <p className="text-body text-ink-2">Заявка принята. Оператор свяжется с вами с 8:00 до 20:00.</p> : (
               <form onSubmit={submitExpertRequest}>
                 <div className="grid min-w-0 grid-cols-1 gap-2 md:grid-cols-2 desktop:grid-cols-[1fr_1fr_1fr_auto]">
                   <PhoneInput onValueChange={(value, valid) => { setPhone(value); setPhoneValid(valid); }} showError={showPhoneError} />
                   <input aria-label="Что ищете" className={selectClassName} name="part" placeholder="Что ищете" required />
                   <input aria-label="Автомобиль: модель и год" className={`${selectClassName} md:col-span-2 desktop:col-span-1`} name="vehicle" placeholder="Автомобиль (модель, год)" />
-                  <button className="h-control w-full rounded-ui bg-accent px-6 text-btn font-bold text-white hover:bg-accent-hover md:col-span-2 desktop:col-span-1 desktop:w-auto" type="submit">Отправить заявку</button>
+                  <button className="h-control w-full rounded-ui bg-accent px-6 text-btn font-bold text-white hover:bg-accent-hover disabled:opacity-50 md:col-span-2 desktop:col-span-1 desktop:w-auto" disabled={sending} type="submit">{sending ? "Отправляем…" : "Отправить заявку"}</button>
                 </div>
                 <input name="phone" type="hidden" value={phone} />
-                <div className="mt-2 flex flex-col gap-2 text-meta md:flex-row md:items-center md:justify-between"><p className="text-ink-2">Уточним совместимость и перезвоним в течение 15 минут.</p><p className="text-ink-3">Отправляя заявку, вы соглашаетесь с обработкой <a className="underline hover:text-ink" href="/privacy">персональных данных</a>.</p></div>
+                {submitError ? <p className="text-body text-accent" role="alert">{submitError}</p> : null}
+                <div className="mt-2 flex flex-col gap-2 text-meta md:flex-row md:items-center md:justify-between"><p className="text-ink-2">Уточним совместимость и свяжемся с вами с 8:00 до 20:00.</p><p className="text-ink-3">Отправляя заявку, вы соглашаетесь с обработкой <Link className="underline hover:text-ink" href="/privacy">персональных данных</Link>.</p></div>
               </form>
             )}
           </div>

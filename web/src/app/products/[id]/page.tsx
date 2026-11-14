@@ -7,6 +7,11 @@ import { ProductDetails } from "@/components/product/ProductDetails";
 import { ProductRail } from "@/components/product/ProductRail";
 import { SectionHeader } from "@/components/ui/section-header";
 import { getHomepage } from "@/lib/catalog-gateway";
+import { getLiveHomepage, toStoreProduct } from "@/lib/live-catalog";
+import { partById } from "@/lib/parts-db";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function generateStaticParams() {
   const homepage = await getHomepage();
@@ -16,15 +21,19 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps<"/products/[id]">) {
   const { id } = await params;
   const homepage = await getHomepage();
+  const own = partById(id);
   const product = [...homepage.popularProducts, ...homepage.recommendedProducts].find((item) => item.id === id);
-  return { title: product ? `${product.name} — NAA.md` : "Товар не найден — NAA.md" };
+  const name = own && !own.hidden ? own.nameRu : product?.name;
+  return { title: name ? `${name} — NAA.md` : "Товар не найден — NAA.md" };
 }
 
 export default async function ProductPage({ params }: PageProps<"/products/[id]">) {
   const { id } = await params;
-  const homepage = await getHomepage();
+  const homepage = await getLiveHomepage();
   const products = [...homepage.popularProducts, ...homepage.recommendedProducts];
-  const product = products.find((item) => item.id === id);
+  // Деталь, заведённая в админке, живёт в базе склада, а не в демонстрационном наборе.
+  const own = partById(id);
+  const product = products.find((item) => item.id === id) ?? (own && !own.hidden ? toStoreProduct(own) : undefined);
 
   if (!product) {
     notFound();

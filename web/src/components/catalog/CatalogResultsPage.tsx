@@ -11,7 +11,9 @@ import { createCatalogListing, type SearchParamsRecord } from "@/lib/catalog-lis
 
 type CatalogResultsPageProps = {
   categoryName?: string;
+  intro?: string;
   categorySlug?: string;
+  ownCategoryId?: string;
   homepage: HomepageData;
   isSearch?: boolean;
   searchParams: SearchParamsRecord;
@@ -66,8 +68,8 @@ function activeChips(source: SearchParamsRecord): Chip[] {
   ];
 }
 
-export function CatalogResultsPage({ categoryName, categorySlug, homepage, isSearch = false, searchParams }: CatalogResultsPageProps) {
-  const listing = createCatalogListing(homepage, searchParams, categorySlug);
+export function CatalogResultsPage({ categoryName, categorySlug, homepage, intro, isSearch = false, ownCategoryId, searchParams }: CatalogResultsPageProps) {
+  const listing = createCatalogListing(homepage, searchParams, categorySlug, ownCategoryId);
   const pathname = isSearch ? "/search" : `/catalog/${categorySlug}`;
   const chips = activeChips(searchParams);
   const clearFilters = clearFiltersUrl(pathname, searchParams);
@@ -77,6 +79,7 @@ export function CatalogResultsPage({ categoryName, categorySlug, homepage, isSea
     <section className="min-w-0">
       <p className="text-meta text-ink-2"><Link className="hover:text-accent" href="/">Главная</Link> / {isSearch ? "Поиск" : "Каталог"}{categoryName ? ` / ${categoryName}` : ""}</p>
       <h1 className="mt-2 text-block font-bold text-ink">{title}</h1>
+      {intro && <p className="mt-2 text-body text-ink-2">{intro}</p>}
     </section>
     <section className="flex min-w-0 flex-col gap-6 lg:flex-row">
       <div className="shrink-0 lg:w-64"><Suspense fallback={<CatalogFilterSkeleton />}><CatalogFilterSidebar action={pathname} baseParams={searchParams} brands={listing.brandFacets} categories={listing.categories} filters={listing.filters} /></Suspense></div>

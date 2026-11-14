@@ -74,7 +74,7 @@ function deliveryFor(product: Product) {
 }
 
 function uniqueProducts(homepage: HomepageData) {
-  return [...new Map([...homepage.popularProducts, ...homepage.recommendedProducts]
+  return [...new Map([...(homepage.liveProducts ?? []), ...homepage.popularProducts, ...homepage.recommendedProducts]
     .map((product) => [`${product.sku}:${product.name}`, product])).values()];
 }
 
@@ -99,10 +99,13 @@ export function parseCatalogFilters(params: SearchParamsRecord): CatalogFilters 
   };
 }
 
-export function createCatalogListing(homepage: HomepageData, params: SearchParamsRecord, categorySlug?: string): CatalogListing {
+export function createCatalogListing(homepage: HomepageData, params: SearchParamsRecord, categorySlug?: string, ownCategoryId?: string): CatalogListing {
   const filters = parseCatalogFilters(params);
   const allProducts = uniqueProducts(homepage);
-  const scopedProducts = categorySlug ? allProducts.filter((product) => categoryForProduct(product) === categorySlug) : allProducts;
+  // У категории из справочника владельца есть настоящая привязка, угадывать по названию не нужно.
+  const scopedProducts = ownCategoryId
+    ? allProducts.filter((product) => product.categoryId === ownCategoryId)
+    : categorySlug ? allProducts.filter((product) => categoryForProduct(product) === categorySlug) : allProducts;
   const withoutBrand = scopedProducts
     .filter((product) => matchesQuery(product, filters.query))
     .filter((product) => !filters.priceFrom || (product.priceMdl ?? 0) >= filters.priceFrom)

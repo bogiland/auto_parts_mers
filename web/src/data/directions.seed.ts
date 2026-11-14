@@ -76,7 +76,9 @@ export function getDirectionHome(slug: string) {
 }
 
 export function categoriesForDirection(categories: Category[], direction: DirectionHomeDefinition) {
-  return direction.categoryIds
+  const picked = direction.categoryIds
     .map((id) => categories.find((category) => category.id === id))
     .filter((category): category is Category => Boolean(category));
+  // Как только владелец завёл собственные категории, подборка по направлениям из seed перестаёт совпадать по id.
+  return picked.length ? picked : categories;
 }

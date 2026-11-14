@@ -1,9 +1,11 @@
-import { ChevronDown, MapPin, MessageCircle, Phone, Send } from "lucide-react";
+import { ChevronDown, MapPin, Phone } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 
 import { SearchBox, SearchBoxFallback } from "@/components/search/SearchBox";
+import { headerLinks, pageLinks } from "@/lib/pages-db";
+import { currentCustomer } from "@/lib/customer-auth";
 
 import { CatalogButton } from "./CatalogButton";
 import { DesktopMainRow } from "./DesktopMainRow";
@@ -14,16 +16,17 @@ interface SiteHeaderProps {
   phone: string;
 }
 
-const navigation = [
-  ["Легковые запчасти", "/catalog/legkovye"],
-  ["Автохимия", "/catalog/avtohimiya"],
-  ["Автосервис", "/autoservice"],
-  ["Русификация", "/russification"],
-  ["Автомобили в наличии", "/cars"],
-  ["Акции", "/promotions"],
-] as const;
+// Разделы каталога заданы маршрутами, остальные пункты меню берутся из «Сайт → Страницы»:
+// выключенная страница сразу исчезает из шапки.
+const catalogLinks = [{ label: "Легковые запчасти", href: "/catalog/legkovye" }, { label: "Автохимия", href: "/catalog/avtohimiya" }];
 
-export function SiteHeader({ hours, phone }: SiteHeaderProps) {
+export async function SiteHeader({ hours, phone }: SiteHeaderProps) {
+  // Вошедший покупатель видит своё имя вместо «Войти» и попадает сразу в кабинет.
+  const customer = await currentCustomer();
+  const account = { label: customer ? customer.name : "Войти", href: customer ? "/account" : "/login" };
+  const navigation = [...catalogLinks, ...pageLinks("nav")];
+  const topLinks = headerLinks();
+  const contacts = topLinks.find((link) => link.href === "/contacts");
   return (
     <header>
       <div className="desktop:hidden">
@@ -31,11 +34,11 @@ export function SiteHeader({ hours, phone }: SiteHeaderProps) {
           <div className="container-site flex h-full min-w-0 items-center justify-between">
             <CatalogButton mobile />
             <Link aria-label="NAA.md, главная" className="min-w-0" href="/">
-              <Image alt="NAA.md" className="h-7 w-auto object-contain" height={28} priority src="/images/brand/naa-logo.png" width={160} />
+              <span className="relative block h-6 w-32 overflow-hidden"><Image alt="NAA.md" className="absolute top-1/2 h-auto w-full -translate-y-1/2" height={289} priority src="/images/brand/naa-logo-transparent.png" width={863} /></span>
             </Link>
-            <a aria-label={`Позвонить ${phone}`} className="grid h-10 w-10 place-items-center rounded-ui text-white hover:bg-white/10" href="tel:+37368123456">
+            <Link aria-label={phone ? `Позвонить ${phone}` : "Оставить заявку"} className="grid h-10 w-10 place-items-center rounded-ui text-white hover:bg-white/10" href={phone ? `tel:${phone.replace(/[^\d+]/g, "")}` : "/#expert-request"}>
               <Phone aria-hidden="true" size={20} />
-            </a>
+            </Link>
           </div>
         </div>
         <div className="sticky top-0 z-40 bg-header">
@@ -44,7 +47,7 @@ export function SiteHeader({ hours, phone }: SiteHeaderProps) {
           </div>
         </div>
         <nav aria-label="Разделы каталога" className="header-mobile-nav scroller-x h-9 items-center bg-header px-4 text-nav font-medium text-white" data-scroller>
-          {navigation.map(([label, href]) => <Link className={label === "Акции" ? "shrink-0 font-bold text-accent" : "shrink-0 hover:text-accent"} href={href} key={label}>{label}</Link>)}
+          {navigation.map((link) => <Link className={link.label === "Акции" ? "shrink-0 font-bold text-accent" : "shrink-0 hover:text-accent"} href={link.href} key={link.href}>{link.label}</Link>)}
         </nav>
       </div>
 
@@ -52,29 +55,26 @@ export function SiteHeader({ hours, phone }: SiteHeaderProps) {
         <div className="bg-header-dark py-2">
           <div className="container-site flex min-w-0 items-center justify-between text-body text-white">
             <div className="flex min-w-0 items-center">
-              <Link className="flex shrink-0 items-center gap-1 font-bold" href="/contacts"><MapPin aria-hidden="true" size={16} />Слободзея<ChevronDown aria-hidden="true" size={14} /></Link>
+              {contacts
+                ? <Link className="flex shrink-0 items-center gap-1 font-bold" href={contacts.href}><MapPin aria-hidden="true" size={16} />Слободзея<ChevronDown aria-hidden="true" size={14} /></Link>
+                : <span className="flex shrink-0 items-center gap-1 font-bold"><MapPin aria-hidden="true" size={16} />Слободзея</span>}
               <nav aria-label="Информация о компании" className="header-top-links flex min-w-0 items-center gap-4 text-white/60">
-                <Link className="hover:text-white" href="/about">О компании</Link>
-                <Link className="hover:text-white" href="/delivery">Доставка</Link>
-                <Link className="hover:text-white" href="/contacts">Контакты</Link>
-                <Link className="hover:text-white" href="/vacancies">Вакансии</Link>
+                {topLinks.map((link) => <Link className="hover:text-white" href={link.href} key={link.href}>{link.label}</Link>)}
               </nav>
             </div>
             <div className="flex shrink-0 items-center gap-4 text-white/60">
-              <a aria-label="Telegram" className="hover:text-white" href="#telegram"><Send aria-hidden="true" size={18} /></a>
-              <a aria-label="WhatsApp" className="hover:text-white" href="#whatsapp"><MessageCircle aria-hidden="true" size={18} /></a>
-              <a className="text-lead font-bold text-white" href="tel:+37368123456" title={hours}>{phone}</a>
+              {phone ? <a className="text-lead font-bold text-white" href={`tel:${phone.replace(/[^\d+]/g, "")}`} title={hours}>{phone}</a> : <Link className="text-lead font-bold text-white" href="/#expert-request">Помощь эксперта</Link>}
             </div>
           </div>
         </div>
         <div className="bg-header">
-          <DesktopMainRow hours={hours} />
+          <DesktopMainRow account={account} hours={hours} />
           <nav aria-label="Основная навигация" className="container-site flex h-9 items-center justify-between gap-4 pb-3 text-body text-white">
-            {navigation.map(([label, href]) => <Link className={label === "Акции" ? "font-bold text-accent" : "hover:text-accent"} href={href} key={label}>{label}</Link>)}
+            {navigation.map((link) => <Link className={link.label === "Акции" ? "font-bold text-accent" : "hover:text-accent"} href={link.href} key={link.href}>{link.label}</Link>)}
           </nav>
         </div>
       </div>
-      <MobileTabBar />
+      <MobileTabBar account={account} />
     </header>
   );
 }

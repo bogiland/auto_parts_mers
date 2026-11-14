@@ -1,0 +1,62 @@
+import { cookies } from "next/headers";
+import { cookieName, sameOrigin } from "@/lib/staff-auth";
+import { revealPhone, session } from "@/lib/staff-db";
+import {
+  buildReceipt, changeStatus, clientByPhone, createCallOrder, createReturn, messageTemplates, orderDetail,
+  returnsOfOrder, searchParts, setAgainstAdvice, setDeliveryCost, setDeliveryMethod, setFiscalNumber,
+  setIssuePhotos, setOrderNotes, setPaymentMethod,
+} from "@/lib/orders-db";
+import { getSettings } from "@/lib/checkout-db";
+
+export const runtime = "nodejs";
+
+export async function POST(request: Request) {
+  if (!sameOrigin(request)) return new Response(null, { status: 403 });
+  const actor = session((await cookies()).get(cookieName)?.value);
+  if (!actor) return new Response(null, { status: 401 });
+  const body = await request.json().catch(() => null);
+  if (!body || typeof body !== "object") return new Response(null, { status: 400 });
+  const json = (data: unknown) => Response.json(data, { headers: { "Cache-Control": "no-store" } });
+  const id = () => {
+    if (!Number.isSafeInteger(body.id)) throw new Error("Заказ не найден.");
+    return Number(body.id);
+  };
+  try {
+    switch (body.action) {
+      case "order-status": changeStatus(actor, id(), String(body.status), body.version, typeof body.comment === "string" ? body.comment : ""); break;
+      case "delivery-cost": setDeliveryCost(actor, id(), body.cost, body.version); break;
+      case "order-notes": setOrderNotes(actor, id(), body.notes, body.version); break;
+      case "against-advice": setAgainstAdvice(actor, id(), body.value === true, body.version); break;
+      case "issue-photos": return json({ ok: true, photos: setIssuePhotos(actor, id(), body.photos, body.version) });
+      case "receipt": {
+        const result = buildReceipt(actor, id(), body.version, new URL(request.url).origin);
+        return json({ ok: true, ...result, url: `/receipt/${result.token}` });
+      }
+      case "fiscal-number": setFiscalNumber(actor, id(), body.value, body.version); break;
+      case "delivery-method": setDeliveryMethod(actor, id(), body.method, body.address, body.version); break;
+      case "payment-method": setPaymentMethod(actor, id(), body.method, body.version); break;
+      case "order-detail": {
+        const order = orderDetail(id());
+        if (!order) throw new Error("Заказ не найден.");
+        return json({ ok: true, order, returns: returnsOfOrder(order.id), message: messageTemplates(order, getSettings()) });
+      }
+      case "create-return": createReturn(actor, body); break;
+      case "create-call-order": return json({ ok: true, ...createCallOrder(actor, body) });
+      case "client-lookup": return json({ ok: true, client: clientByPhone(String(body.phone ?? "")) });
+      case "search-parts": return json({ ok: true, parts: searchParts(String(body.query ?? "")) });
+      case "order-message": {
+        const order = orderDetail(id());
+        if (!order) throw new Error("Заказ не найден.");
+        return json({ ok: true, ...messageTemplates(order, getSettings()) });
+      }
+      case "order-phone": {
+        const phone = revealPhone(actor, id());
+        return phone ? json({ ok: true, phone }) : new Response(null, { status: 404 });
+      }
+      default: return new Response(null, { status: 400 });
+    }
+    return json({ ok: true });
+  } catch (error) {
+    return Response.json({ message: error instanceof Error ? error.message : "Не удалось сохранить" }, { status: 400 });
+  }
+}

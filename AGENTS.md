@@ -41,3 +41,7 @@ The layout reference is armtek.ru. The accent is NAA red.
 - Do not add VIN or licence-plate search.
 - When a component is rewritten in Tailwind, remove its previous BEM styles.
 - Do not introduce colors that only resemble an existing token.
+
+## Product context
+
+Read `docs/product-context.md` before editing storefront content, catalog, checkout, delivery, payment, or returns. Its owner-provided business details supersede older Mercedes-only mockup assumptions.

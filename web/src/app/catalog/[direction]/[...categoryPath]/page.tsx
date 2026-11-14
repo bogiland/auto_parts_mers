@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 
 import { CatalogResultsPage } from "@/components/catalog/CatalogResultsPage";
 import { VehicleJourney } from "@/components/catalog/vehicle-journey";
@@ -9,13 +9,17 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { SectionHeader } from "@/components/ui/section-header";
 import { getDirectionHome, sourceCategorySlug } from "@/data/directions.seed";
 import { getHomepage } from "@/lib/catalog-gateway";
+import { getLiveHomepage } from "@/lib/live-catalog";
 import { categorySlugFromPath, type SearchParamsRecord } from "@/lib/catalog-listing";
 import { getBrands, getModels } from "@/lib/vehicles";
+import { findPublicCategory } from "@/lib/reference-db";
 
 type CatalogCategoryPageProps = {
   params: Promise<{ categoryPath: string[]; direction: string }>;
   searchParams: Promise<SearchParamsRecord>;
 };
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function generateStaticParams() {
   const params = getBrands().map((brand) => ({ direction: "legkovye", categoryPath: [brand.slug] }));
@@ -25,6 +29,11 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: CatalogCategoryPageProps) {
   const { categoryPath, direction } = await params;
+  const own = findPublicCategory(categoryPath.at(-1) ?? "");
+  if (own && own.status !== "redirect") {
+    if (own.status === "hidden") return { robots: { index: false, follow: false }, title: "Раздел временно недоступен — NAA.md" };
+    return { description: own.seoDescription || `Автозапчасти категории «${own.name}»: цены, наличие и подбор экспертом.`, title: own.seoTitle || `${own.name} — купить автозапчасти | NAA.md` };
+  }
   const homepage = await getHomepage();
   const category = homepage.categories.find((item) => item.slug === categorySlugFromPath(categoryPath.at(-1) ?? ""));
   if (category) return { description: `Автозапчасти категории «${category.name}»: цены, наличие и подбор экспертом.`, title: `${category.name} — купить автозапчасти | NAA.md` };
@@ -36,9 +45,11 @@ export default async function CatalogCategoryPage({ params, searchParams }: Cata
   const [{ categoryPath, direction: directionSlug }, query] = await Promise.all([params, searchParams]);
   const direction = getDirectionHome(directionSlug);
   if (!direction) notFound();
-  const homepage = await getHomepage();
+  const homepage = await getLiveHomepage();
   const [first] = categoryPath;
   const vehicleBrand = directionSlug === "legkovye" ? getBrands().find((item) => item.slug === first) : null;
+  const own = findPublicCategory(categoryPath.at(-1) ?? "");
+  if (own?.status === "redirect") permanentRedirect(`/catalog/${directionSlug}/${own.slug}`);
 
   let content: React.ReactNode;
   if (directionSlug === "legkovye" && first === "brands") {
@@ -50,6 +61,10 @@ export default async function CatalogCategoryPage({ params, searchParams }: Cata
   } else if (vehicleBrand) {
     content = await VehicleJourney({ homepage, path: categoryPath });
     if (!content) notFound();
+  } else if (own && own.status === "hidden") {
+    content = <main className="container-site section-stack bg-surface-2 pb-12 pt-4"><section className="rounded-ui bg-white p-4 desktop:p-6"><h1 className="text-section font-bold text-ink">Раздел временно недоступен</h1><p className="mt-2 text-body text-ink-2">Этот раздел каталога сейчас закрыт. Загляните позже или напишите оператору — подберём деталь вручную.</p><Link className="mt-4 inline-flex rounded-ui bg-accent px-4 py-3 text-btn font-bold text-white hover:bg-accent-hover" href="/catalog/legkovye">Вернуться в каталог</Link></section></main>;
+  } else if (own && own.status === "ok") {
+    content = <CatalogResultsPage categoryName={own.name} categorySlug={own.slug} homepage={homepage} intro={own.intro} ownCategoryId={own.id} searchParams={query} />;
   } else {
     const categorySlug = categorySlugFromPath(sourceCategorySlug(categoryPath.at(-1) ?? ""));
     const category = homepage.categories.find((item) => item.slug === categorySlug);

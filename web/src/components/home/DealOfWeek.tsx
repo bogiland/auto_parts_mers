@@ -7,6 +7,7 @@ import { useState } from "react";
 
 import type { Product } from "@/domain/catalog";
 import { ProductRail } from "@/components/product/ProductRail";
+import { CartControl } from "@/components/cart/CartControl";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 
 function oldPrice(product: Product) {
@@ -43,7 +44,7 @@ function DealDetails({ product }: { product: Product }) {
       <p className="mt-1 whitespace-nowrap text-price font-bold text-accent">{price(product)}{previousPrice ? <span className="ml-2 text-meta font-normal text-ink-3 line-through">{previousPrice}</span> : null}</p>
       <p className="mt-1 truncate text-meta text-ink-2">{product.brand} · {product.sku}</p>
       <h3 className="mt-1 line-clamp-2 text-body font-bold text-ink">{product.name}</h3>
-      <button className="mt-2 h-9 w-fit rounded-ui bg-accent px-4 text-btn font-bold text-white hover:bg-accent-hover" type="button">В корзину</button><p className="mt-2 text-meta text-ink-2">Доставка от 1 дня</p>
+      <CartControl className="mt-2 w-full" product={product} /><p className="mt-2 text-meta text-ink-2">Доставка от 1 дня</p>
     </div>
   );
 }

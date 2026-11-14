@@ -35,6 +35,8 @@ export interface HomepageData {
   popularProducts: Product[];
   recommendedProducts: Product[];
   posts: PostPreview[];
+  /** Детали, заведённые владельцем в админке. Витрина показывает их вместе с демонстрационными. */
+  liveProducts?: Product[];
 }
 
 export interface PostPreview {
@@ -58,6 +60,14 @@ export interface Product {
   reviewCount: number;
   image: MediaAsset;
   images?: MediaAsset[];
+  stock?: number;
+  priceRub?: number;
+  condition?: string;
+  donor?: string;
+  donorId?: string;
+  categoryId?: string;
+  location?: string;
+  returnRestricted?: boolean;
 }
 
 export interface Brand {

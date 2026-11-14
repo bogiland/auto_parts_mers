@@ -9,10 +9,13 @@ import { PromoRail } from "@/components/home/PromoRail";
 import { ProductRail } from "@/components/product/ProductRail";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SectionHeader } from "@/components/ui/section-header";
-import { getHomepage } from "@/lib/catalog-gateway";
+import { getLiveHomepage, ownCategoryGroups } from "@/lib/live-catalog";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const homepage = await getHomepage();
+  const homepage = await getLiveHomepage();
 
   return (
     <>
@@ -23,7 +26,7 @@ export default async function HomePage() {
           <div className="deal-week-column min-w-0"><DealOfWeek products={homepage.popularProducts} /></div>
         </section>
         <ExpertMatchTabs />
-        <CategoryTabs />
+        <CategoryTabs own={ownCategoryGroups()} />
         <section className="popular-products">
           <SectionHeader href="/catalog/legkovye" linkText="Смотреть все товары" title="Популярные товары" />
           <ProductRail products={homepage.popularProducts.slice(0, 9)} />

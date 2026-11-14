@@ -11,6 +11,7 @@
 
   --color-accent: #df1420;
   --color-accent-hover: #c4111c;
+  --color-success: #22c55e;
   --color-ink: #000a12;
   --color-ink-2: #666c71;
   --color-ink-3: #a3a7aa;
@@ -159,7 +160,9 @@
 .header-desktop-row--pinned { box-shadow: var(--shadow-card); height: var(--header-row-pinned-height); left: 0; min-height: var(--header-row-pinned-height); position: fixed; right: 0; top: 0; z-index: 50; }
 .header-desktop-row-spacer { height: var(--header-row-height); }
 .header-desktop-row-spacer--pinned { height: var(--header-row-pinned-height); }
-.header-mobile-nav { gap: 20px; }
+.header-mobile-nav { gap: 20px; scroll-snap-type: none; }
+.cart-product-image { height: 72px; width: 72px; }
+@media (min-width: 768px) { .cart-product-image { height: 96px; width: 96px; } }
 .category-tile-image { height: 96px; width: 96px; }
 .brand-tile { height: var(--brand-tile-height); }
 .search-suggestions { max-height: var(--search-suggestions-height); }

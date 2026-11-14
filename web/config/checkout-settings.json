@@ -1,0 +1,28 @@
+{
+  "pickupAddress": "Слободзея, ул. Новосовицкая 25",
+  "pickupHours": "9:00-18:00",
+  "operatorHours": "8:00-20:00",
+  "operatorStartHour": 8,
+  "operatorEndHour": 20,
+  "timezone": "Europe/Chisinau",
+  "phones": { "pmr": "", "moldova": "" },
+  "deliveryMethods": [
+    { "id": "pickup", "title": "Самовывоз", "description": "Слободзея, ул. Новосовицкая 25, 9:00-18:00", "needsAddress": false },
+    { "id": "local", "title": "Доставка до 20 км", "description": "По договорённости", "needsAddress": true },
+    { "id": "carrier", "title": "Маршрутка или служба доставки", "description": "Платно, сумму уточнит оператор", "needsAddress": true }
+  ],
+  "paymentMethods": [
+    { "id": "receipt", "title": "При получении" },
+    { "id": "transfer", "title": "Перевод после подтверждения" }
+  ],
+  "messengers": { "viber": "", "telegram": "" },
+  "receipt": {
+    "header": "NAA.md — разборка автомобилей, Слободзея",
+    "requisites": "Слободзея, ул. Новосовицкая 25\nРежим работы точки: 9:00-18:00\nОператор отвечает: 8:00-20:00",
+    "signature": "Деталь выдал: ____________________",
+    "warranty": "Гарантия и возврат: деталь принимается обратно с сохранёнными метками и наклейками, в исходном состоянии. Двигатели, коробки передач и агрегаты в сборе возврату не подлежат.",
+    "invoiceTitle": "Накладная на выдачу деталей",
+    "fiscalNumber": ""
+  },
+  "rubPerMdl": null
+}

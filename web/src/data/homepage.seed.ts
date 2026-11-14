@@ -25,7 +25,7 @@ const categoryImages: Record<string, MediaAsset> = {
 };
 
 export const homepageSeed: HomepageData = {
-  phone: "+373 68 123 456",
+  phone: "",
   hours: "Пн–Сб 09:00–18:00",
   heroSlides: [
     {
@@ -53,7 +53,7 @@ export const homepageSeed: HomepageData = {
     ["engine", "Двигатель и компоненты", 1248], ["brakes", "Тормозная система", 892], ["suspension", "Подвеска и рулевое управление", 764], ["transmission", "Трансмиссия и коробка передач", 623], ["electrical", "Электрооборудование", 1120], ["cooling", "Охлаждение и отопление", 456], ["body", "Кузов и экстерьер", 456], ["interior", "Интерьер и комфорт", 532], ["exhaust", "Выхлопная система", 387], ["filters", "Фильтры и расходники", 689], ["bearings", "Подшипники и крепёжные элементы", 214], ["accessories", "Аксессуары и тюнинг", 162],
   ].map(([slug, name, productCount]) => ({ id: `category-${slug}`, slug: String(slug), name: String(name), productCount: Number(productCount), image: categoryImages[String(slug)] ?? productImages["oil-filter"], isVisible: true })),
   popularProducts: [
-    { id: "pads-w213", sku: "A000-420-91-20", brand: "Mercedes-Benz", name: "Тормозные колодки передние", priceMdl: 1490, priceMode: "fixed", rating: 4.8, reviewCount: 124, image: productImages["brake-pads"] },
+    { id: "pads-w213", stock: 3, sku: "A000-420-91-20", brand: "Mercedes-Benz", name: "Тормозные колодки передние", priceMdl: 1490, priceMode: "fixed", rating: 4.8, reviewCount: 124, image: productImages["brake-pads"] },
     { id: "filter-om654", sku: "A654-180-01-09", brand: "Mercedes-Benz", name: "Масляный фильтр двигателя", priceMdl: 390, priceMode: "fixed", rating: 4.7, reviewCount: 98, image: productImages["oil-filter"] },
     { id: "plugs-m274", sku: "A004-159-81-03", brand: "Mercedes-Benz", name: "Комплект свечей зажигания", priceMdl: 720, priceMode: "fixed", rating: 4.9, reviewCount: 312, image: productImages["spark-plugs"] },
     { id: "disc-w205", sku: "A000-421-20-12", brand: "Mercedes-Benz", name: "Тормозной диск передний", priceMdl: 1680, priceMode: "fixed", rating: 4.8, reviewCount: 176, image: productImages["brake-disc"] },

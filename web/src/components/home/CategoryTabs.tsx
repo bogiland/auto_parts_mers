@@ -10,11 +10,19 @@ import { categoryTabs, homeCategories, type HomeCategoryTab } from "@/lib/data/h
 const icons: Record<string, LucideIcon> = { Battery, CircleDot, Cog, Disc3, Grid2X2, Wrench };
 const categoriesWithoutImages = homeCategories.filter((category) => !category.image);
 
-export function CategoryTabs() {
+export type OwnCategoryGroup = { id: string; label: string; href: string; image: string; children: { id: string; title: string; href: string; image: string }[] };
+type Tile = { id: string; title: string; href: string; image: string | null; imageAlt: string };
+
+// Как только владелец завёл свои категории, блок на главной строится из справочника, а не из заготовки.
+export function CategoryTabs({ own = [] }: { own?: OwnCategoryGroup[] }) {
   const [activeTab, setActiveTab] = useState<HomeCategoryTab>("popular");
+  const [activeOwn, setActiveOwn] = useState(0);
   const [hasOverflow, setHasOverflow] = useState(false);
   const tabListRef = useRef<HTMLDivElement>(null);
-  const categories = homeCategories.filter((category) => category.tab === activeTab);
+  const ownGroup = own[Math.min(activeOwn, Math.max(0, own.length - 1))];
+  const categories: Tile[] = own.length
+    ? (ownGroup?.children.length ? ownGroup.children.map((child) => ({ id: child.id, title: child.title, href: child.href, image: child.image || null, imageAlt: child.title })) : ownGroup ? [{ id: ownGroup.id, title: ownGroup.label, href: ownGroup.href, image: ownGroup.image || null, imageAlt: ownGroup.label }] : [])
+    : homeCategories.filter((category) => category.tab === activeTab).map((category) => ({ id: category.id, title: category.title, href: category.href, image: category.image, imageAlt: category.imageAlt }));
 
   useEffect(() => {
     if (categoriesWithoutImages.length) console.info("TODO: категории без изображений", categoriesWithoutImages.map((category) => category.title));
@@ -34,7 +42,11 @@ export function CategoryTabs() {
       <h2 className="sr-only" id="popular-categories-title">Популярные категории</h2>
       <div className="relative min-w-0">
         <div className="scroller-x min-w-0 items-stretch gap-0 border-b border-line" ref={tabListRef} role="tablist" aria-label="Категории запчастей">
-          {categoryTabs.map((tab) => {
+          {own.length ? own.map((group, index) => {
+            const isActive = index === Math.min(activeOwn, own.length - 1);
+
+            return <button aria-selected={isActive} className={`relative flex h-12 items-center gap-2 px-4 text-lead font-bold whitespace-nowrap ${isActive ? "text-accent after:absolute after:inset-x-4 after:bottom-0 after:h-0.5 after:bg-accent" : "text-ink-2 hover:text-ink"}`} key={group.id} onClick={() => setActiveOwn(index)} role="tab" type="button"><Grid2X2 aria-hidden="true" size={20} strokeWidth={1.8} />{group.label}</button>;
+          }) : categoryTabs.map((tab) => {
             const TabIcon = icons[tab.icon];
             const isActive = activeTab === tab.id;
 

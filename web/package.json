@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest",
-    "qa": "node qa/responsive-check.mjs"
+    "qa": "node qa/responsive-check.mjs",
+    "staff:create-owner": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/create-owner.ps1",
+    "staff:create": "node scripts/create-staff.mjs",
+    "staff:list": "node scripts/create-staff.mjs --list"
   },
   "dependencies": {
     "libphonenumber-js": "^1.13.14",

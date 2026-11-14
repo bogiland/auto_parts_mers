@@ -7,12 +7,15 @@ import { SiteHeader } from "@/components/header/SiteHeader";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { getDirectionHome } from "@/data/directions.seed";
 import { getHomepage } from "@/lib/catalog-gateway";
+import { getLiveHomepage } from "@/lib/live-catalog";
 import { categorySlugFromPath, type SearchParamsRecord } from "@/lib/catalog-listing";
 
 type CatalogDirectionPageProps = {
   params: Promise<{ direction: string }>;
   searchParams: Promise<SearchParamsRecord>;
 };
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: CatalogDirectionPageProps): Promise<Metadata> {
   const { direction } = await params;
@@ -24,7 +27,7 @@ export async function generateMetadata({ params }: CatalogDirectionPageProps): P
 }
 
 export default async function CatalogDirectionPage({ params, searchParams }: CatalogDirectionPageProps) {
-  const [{ direction: segment }, homepage, query] = await Promise.all([params, getHomepage(), searchParams]);
+  const [{ direction: segment }, homepage, query] = await Promise.all([params, getLiveHomepage(), searchParams]);
   const direction = getDirectionHome(segment);
   if (direction) return <><SiteHeader hours={homepage.hours} phone={homepage.phone} /><DirectionHome direction={direction} homepage={homepage} /><SiteFooter /></>;
 
