@@ -111,9 +111,9 @@ export function PartsBoard({ parts, types, categories, donors, makes, locations,
           {part.hidden ? <span className="admin-chip" data-status="closed">скрыта</span> : part.stock === 0 ? <span className="admin-chip" data-status="received">нет в наличии</span> : <span className="admin-chip" data-status="issued">на сайте</span>}
         </span>
         <span className="admin-part-actions">
-          <button aria-label="Продано офлайн, минус один" className="admin-icon-button" disabled={busy || part.stock < 1} onClick={() => void run({ action: "sell-offline", id: part.id }, "Списано: −1. Отменить можно в течение пяти минут.")} title="−1 продано офлайн" type="button"><Minus size={16} /></button>
+          <button aria-label="Продано офлайн, минус один" className="admin-icon-button" disabled={busy || part.stock < 1} onClick={async () => void (await run({ action: "sell-offline", id: part.id }, "Списано: −1. Отменить можно в течение пяти минут."))} title="−1 продано офлайн" type="button"><Minus size={16} /></button>
           <button aria-label="История остатка" className="admin-icon-button" disabled={busy} onClick={async () => { const data = await staffCall<{ moves: Move[] }>("parts", { action: "stock-moves", id: part.id }); setMoves(data.moves); setEdit(part); }} type="button"><History size={16} /></button>
-          <button aria-label={part.hidden ? "Показать на сайте" : "Скрыть с сайта"} className="admin-icon-button" disabled={busy} onClick={() => void run({ action: "part-hidden", id: part.id, hidden: !part.hidden }, part.hidden ? "Деталь снова на сайте" : "Деталь скрыта")} type="button">{part.hidden ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+          <button aria-label={part.hidden ? "Показать на сайте" : "Скрыть с сайта"} className="admin-icon-button" disabled={busy} onClick={async () => void (await run({ action: "part-hidden", id: part.id, hidden: !part.hidden }, part.hidden ? "Деталь снова на сайте" : "Деталь скрыта"))} type="button">{part.hidden ? <EyeOff size={16} /> : <Eye size={16} />}</button>
           <button aria-label="Изменить" className="admin-icon-button" onClick={() => { setEdit(part); setMoves(null); setError(""); }} type="button"><Pencil size={16} /></button>
         </span>
       </div>)}
@@ -166,7 +166,7 @@ function PartEditor({ part, categories, moves, error, run, onClose }: {
       </div>
       {error && <p className="admin-error" role="alert">{error}</p>}
       <div className="admin-image-actions">
-        <button className="admin-button" onClick={() => void run({ action: "update-part", id: part.id, nameRu, nameRo, condition, price, priceOnRequest: onRequest, stock, location, includes, applicability }, "Деталь сохранена")} type="button">Сохранить</button>
+        <button className="admin-button" onClick={async () => void (await run({ action: "update-part", id: part.id, nameRu, nameRo, condition, price, priceOnRequest: onRequest, stock, location, includes, applicability }, "Деталь сохранена"))} type="button">Сохранить</button>
       </div>
 
       <div className="admin-card admin-sub-card">
@@ -179,12 +179,12 @@ function PartEditor({ part, categories, moves, error, run, onClose }: {
           onDragEnd={() => setDragged(null)}
           onDragOver={(event) => event.preventDefault()}
           onDragStart={() => setDragged(index)}
-          onDrop={() => {
+          onDrop={async () => {
             if (dragged === null || dragged === index) return;
             const next = [...photos];
             const [moved] = next.splice(dragged, 1);
             next.splice(index, 0, moved);
-            void savePhotos(next);
+            void (await savePhotos(next));
             setDragged(null);
           }}
         >
@@ -192,11 +192,11 @@ function PartEditor({ part, categories, moves, error, run, onClose }: {
           <img alt="" src={photo.preview || photo.src} />
           {index === 0 && <span className="admin-gallery-cover">Обложка</span>}
           <figcaption>
-            <label><input checked={photo.closeup} onChange={(event) => void savePhotos(photos.map((item, position) => (position === index ? { ...item, closeup: event.target.checked } : item)))} type="checkbox" />крупный план</label>
-            <button aria-label="Удалить фото" className="admin-icon-button" onClick={() => { if (window.confirm("Удалить это фото?")) void savePhotos(photos.filter((_, position) => position !== index)); }} type="button"><Trash size={14} /></button>
+            <label><input checked={photo.closeup} onChange={async (event) => void (await savePhotos(photos.map((item, position) => (position === index ? { ...item, closeup: event.target.checked } : item))))} type="checkbox" />крупный план</label>
+            <button aria-label="Удалить фото" className="admin-icon-button" onClick={async () => { if (window.confirm("Удалить это фото?")) void (await savePhotos(photos.filter((_, position) => position !== index))); }} type="button"><Trash size={14} /></button>
           </figcaption>
         </figure>)}</div>}
-        {photos.length < 6 && <ImagePicker label="Добавить фото" onChange={(next) => { const src = next.part; if (src) void savePhotos([...photos, { src, closeup: false, preview: next.preview ?? "" }]); }} presets={["part"]} previewPreset="part-preview" value={{}} />}
+        {photos.length < 10 && <ImagePicker label="Добавить фото" onChange={async (next) => { const src = next.part; if (src) void (await savePhotos([...photos, { src, closeup: false, preview: next.preview ?? "" }])); }} presets={["part"]} previewPreset="part-preview" value={{}} />}
       </div>
 
       {moves && <div className="admin-card admin-sub-card">
@@ -205,7 +205,7 @@ function PartEditor({ part, categories, moves, error, run, onClose }: {
           {moves.map((move) => <div className="admin-row" key={move.id}>
             <div className="admin-tree-name"><strong>{move.delta > 0 ? `+${move.delta}` : move.delta}</strong><small className="admin-muted">{reasons[move.reason] ?? move.reason}{move.orderId !== null ? ` · заказ № ${move.orderId + 1000}` : ""}</small></div>
             <span className="admin-muted">{move.actor} · {when(move.at)}</span>
-            {move.canUndo && <button className="admin-ghost-button" onClick={() => void run({ action: "undo-move", id: move.id }, "Списание отменено")} type="button"><Undo2 size={14} />Отменить</button>}
+            {move.canUndo && <button className="admin-ghost-button" onClick={async () => void (await run({ action: "undo-move", id: move.id }, "Списание отменено"))} type="button"><Undo2 size={14} />Отменить</button>}
           </div>)}
           {!moves.length && <p className="admin-muted">Остаток ещё не менялся.</p>}
         </div>

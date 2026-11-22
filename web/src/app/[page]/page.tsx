@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: Props) {
   const { page: slug } = await params;
-  const page = findPage(slug);
+  const page = (await findPage(slug));
   if (!page) return { title: "Страница не найдена — NAA.md", robots: { index: false, follow: false } };
   return {
     title: page.seoTitle || `${page.titleRu} — NAA.md`,
@@ -25,12 +25,12 @@ export async function generateMetadata({ params }: Props) {
 export default async function SitePageRoute({ params }: Props) {
   const { page: slug } = await params;
   // Выключенная страница недоступна: findPage её не вернёт, и посетитель получит 404.
-  const page = findPage(slug);
+  const page = (await findPage(slug));
   if (!page) notFound();
   const homepage = await getLiveHomepage();
   return <>
     <SiteHeader hours={homepage.hours} phone={homepage.phone} />
-    <SitePageView page={page} settings={getSettings()} />
+    <SitePageView page={page} settings={(await getSettings())} />
     <SiteFooter />
   </>;
 }

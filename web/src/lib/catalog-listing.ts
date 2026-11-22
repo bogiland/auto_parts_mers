@@ -61,16 +61,12 @@ function categoryForProduct(product: Product) {
 
 function matchesQuery(product: Product, query: string) {
   if (!query) return true;
-  const source = `${product.name} ${product.brand} ${product.sku}`.toLocaleLowerCase("ru-RU");
+  const source = `${product.name} ${product.brand} ${product.sku} ${product.oem ?? ""}`.toLocaleLowerCase("ru-RU");
   return query.toLocaleLowerCase("ru-RU").split(/\s+/).every((token) => source.includes(token));
 }
 
 function isAvailable(product: Product) {
-  return product.priceMode === "fixed";
-}
-
-function deliveryFor(product: Product) {
-  return product.priceMdl && product.priceMdl > 2000 ? "one_day" : "today";
+  return (product.stock??0)>0;
 }
 
 function uniqueProducts(homepage: HomepageData) {
@@ -107,11 +103,11 @@ export function createCatalogListing(homepage: HomepageData, params: SearchParam
     ? allProducts.filter((product) => product.categoryId === ownCategoryId)
     : categorySlug ? allProducts.filter((product) => categoryForProduct(product) === categorySlug) : allProducts;
   const withoutBrand = scopedProducts
+    .filter((product) => !first(params.donors) || (product.donorId && first(params.donors)!.split(",").includes(product.donorId)))
     .filter((product) => matchesQuery(product, filters.query))
     .filter((product) => !filters.priceFrom || (product.priceMdl ?? 0) >= filters.priceFrom)
     .filter((product) => !filters.priceTo || (product.priceMdl ?? 0) <= filters.priceTo)
     .filter((product) => !filters.availability || isAvailable(product))
-    .filter((product) => !filters.delivery || deliveryFor(product) === filters.delivery)
     .filter(() => !filters.vehicle || filters.vehicle === "mercedes-benz")
     .filter(() => !filters.model || filters.vehicle === "mercedes-benz");
   const products = withoutBrand.filter((product) => !filters.brands.length || filters.brands.includes(product.brand));
@@ -148,10 +144,16 @@ export function categorySlugFromPath(value: string) {
     dvigatel: "engine",
     elektrooborudovanie: "electrical",
     filtry: "filters",
+    interer: "interior",
+    krepezh: "bearings",
+    kuzov: "body",
     ohlazhdenie: "cooling",
     podveska: "suspension",
+    rulevoe: "suspension",
     tormoza: "brakes",
     transmissiya: "transmission",
+    vyhlop: "exhaust",
+    zhidkosti: "filters",
   };
   return aliases[value] ?? value;
 }

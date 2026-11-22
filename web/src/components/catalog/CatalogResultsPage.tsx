@@ -1,4 +1,5 @@
-import { Suspense } from "react";
+import { Fragment, Suspense } from "react";
+import { AdSlot } from "@/components/ads/AdSlot";
 import Link from "next/link";
 
 import { CatalogFilterForm, CatalogFilterSidebar, CatalogFilterSkeleton } from "@/components/catalog/CatalogFilterSidebar";
@@ -14,6 +15,7 @@ type CatalogResultsPageProps = {
   intro?: string;
   categorySlug?: string;
   ownCategoryId?: string;
+  pathOverride?: string;
   homepage: HomepageData;
   isSearch?: boolean;
   searchParams: SearchParamsRecord;
@@ -68,9 +70,9 @@ function activeChips(source: SearchParamsRecord): Chip[] {
   ];
 }
 
-export function CatalogResultsPage({ categoryName, categorySlug, homepage, intro, isSearch = false, ownCategoryId, searchParams }: CatalogResultsPageProps) {
+export function CatalogResultsPage({ categoryName, categorySlug, homepage, intro, isSearch = false, ownCategoryId, searchParams, pathOverride }: CatalogResultsPageProps) {
   const listing = createCatalogListing(homepage, searchParams, categorySlug, ownCategoryId);
-  const pathname = isSearch ? "/search" : `/catalog/${categorySlug}`;
+  const pathname = pathOverride ?? (isSearch ? "/search" : `/catalog/${categorySlug}`);
   const chips = activeChips(searchParams);
   const clearFilters = clearFiltersUrl(pathname, searchParams);
   const title = isSearch ? (listing.filters.query ? `Результаты поиска: «${listing.filters.query}»` : "Поиск запчастей") : categoryName ?? "Каталог запчастей";
@@ -91,7 +93,7 @@ export function CatalogResultsPage({ categoryName, categorySlug, homepage, intro
         </div>
         <div className="mt-4"><CatalogToolbar activeFilterCount={chips.length} sort={listing.filters.sort} view={listing.filters.view} /></div>
         <MobileCatalogFilterSheet><CatalogFilterForm action={pathname} baseParams={searchParams} brands={listing.brandFacets} filters={listing.filters} /></MobileCatalogFilterSheet>
-        {listing.products.length ? <><div className={`mt-4 grid min-w-0 gap-2 md:gap-4 ${listing.filters.view === "list" ? "grid-cols-1" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"}`}>{listing.products.map((product) => <ProductCard key={product.id} product={product} />)}</div>{listing.pageCount > 1 ? <nav aria-label="Страницы каталога" className="mt-6 flex flex-wrap justify-center gap-2">{Array.from({ length: listing.pageCount }, (_, index) => index + 1).map((page) => <Link aria-current={page === listing.filters.page ? "page" : undefined} className={`grid h-10 w-10 place-items-center rounded-ui text-body font-bold ${page === listing.filters.page ? "bg-accent text-white" : "bg-surface-2 text-ink hover:text-accent"}`} href={routeWith(pathname, searchParams, "page", String(page))} key={page}>{page}</Link>)}</nav> : null}</> : <div className="mt-4"><EmptyCatalogRequest /></div>}
+        {listing.products.length ? <><div className={`mt-4 grid min-w-0 gap-2 md:gap-4 ${listing.filters.view === "list" ? "grid-cols-1" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"}`}>{listing.products.map((product,index) => <Fragment key={product.id}><ProductCard product={product} />{index===Math.min(3,listing.products.length-1)&&<AdSlot slot="catalog"/>}</Fragment>)}</div>{listing.pageCount > 1 ? <nav aria-label="Страницы каталога" className="mt-6 flex flex-wrap justify-center gap-2">{Array.from({ length: listing.pageCount }, (_, index) => index + 1).map((page) => <Link aria-current={page === listing.filters.page ? "page" : undefined} className={`grid h-10 w-10 place-items-center rounded-ui text-body font-bold ${page === listing.filters.page ? "bg-accent text-white" : "bg-surface-2 text-ink hover:text-accent"}`} href={routeWith(pathname, searchParams, "page", String(page))} key={page}>{page}</Link>)}</nav> : null}</> : <div className="mt-4"><EmptyCatalogRequest /></div>}
       </div>
     </section>
   </main>;

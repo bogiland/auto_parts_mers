@@ -3,8 +3,8 @@ import { roboto } from "./fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "NAA.md — запчасти для Mercedes-Benz в Слободзее",
-  description: "Каталог автозапчастей Mercedes-Benz, VIN-подбор и консультация в Слободзее.",
+  title: "NAA.md — автозапчасти с разборки в Слободзее",
+  description: "Б/у запчасти с разборки и новые расходники — Mercedes-Benz, Lexus, BMW, Toyota, Ford, Chevrolet. Слободзея, ПМР и Молдова.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

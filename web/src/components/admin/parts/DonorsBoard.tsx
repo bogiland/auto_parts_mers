@@ -67,7 +67,7 @@ export function DonorsBoard({ donors, makes }: { donors: Donor[]; makes: Vehicle
         {!donor.visible && <span className="admin-chip" data-status="closed">скрыт</span>}
         <div className="admin-tree-actions">
           {donor.visible && <Link aria-label="Открыть страницу машины" className="admin-icon-button" href={`/donors/${donor.id}`} target="_blank"><ExternalLink size={16} /></Link>}
-          <button aria-label={donor.visible ? "Скрыть" : "Показать"} className="admin-icon-button" disabled={busy} onClick={() => void run({ action: "save-donor", ...donor, year: donor.year ?? "", mileage: donor.mileage ?? "", visible: !donor.visible, photos: donor.photos }, donor.visible ? "Машина скрыта" : "Машина снова на сайте")} type="button">{donor.visible ? <Eye size={16} /> : <EyeOff size={16} />}</button>
+          <button aria-label={donor.visible ? "Скрыть" : "Показать"} className="admin-icon-button" disabled={busy} onClick={async () => void (await run({ action: "save-donor", ...donor, year: donor.year ?? "", mileage: donor.mileage ?? "", visible: !donor.visible, photos: donor.photos }, donor.visible ? "Машина скрыта" : "Машина снова на сайте"))} type="button">{donor.visible ? <Eye size={16} /> : <EyeOff size={16} />}</button>
           <button aria-label="Изменить" className="admin-icon-button" onClick={() => { setDraft({ ...donor, year: donor.year === null ? "" : String(donor.year), mileage: donor.mileage === null ? "" : String(donor.mileage) }); setError(""); }} type="button"><Pencil size={16} /></button>
         </div>
       </div>)}

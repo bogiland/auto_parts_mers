@@ -74,19 +74,19 @@ export function CategoryTree({ tree, flat }: { tree: CategoryNode[]; flat: Categ
 
   function rows(nodes: CategoryNode[]): React.ReactNode {
     return nodes.map((node) => <div className="admin-tree-branch" key={node.id}>
-      <div className="admin-tree-drop" onDragOver={(event) => event.preventDefault()} onDrop={(event) => void drop(event, node, "before")} />
-      <div className={`admin-tree-row ${drag === node.id ? "is-dragging" : ""}`} data-depth={node.depth} draggable onDragEnd={() => setDrag(null)} onDragOver={(event) => event.preventDefault()} onDragStart={() => setDrag(node.id)} onDrop={(event) => void drop(event, node, "into")}>
+      <div className="admin-tree-drop" onDragOver={(event) => event.preventDefault()} onDrop={async (event) => void (await drop(event, node, "before"))} />
+      <div className={`admin-tree-row ${drag === node.id ? "is-dragging" : ""}`} data-depth={node.depth} draggable onDragEnd={() => setDrag(null)} onDragOver={(event) => event.preventDefault()} onDragStart={() => setDrag(node.id)} onDrop={async (event) => void (await drop(event, node, "into"))}>
         <span className="admin-tree-grip" title="Перетащите, чтобы изменить порядок или вложенность"><GripVertical size={16} /></span>
         {node.children.length > 0 ? <button aria-label={collapsed.includes(node.id) ? "Развернуть" : "Свернуть"} className="admin-icon-button" onClick={() => setCollapsed((current) => current.includes(node.id) ? current.filter((id) => id !== node.id) : [...current, node.id])} type="button">{collapsed.includes(node.id) ? <ChevronRight size={16} /> : <ChevronDown size={16} />}</button> : <span className="admin-tree-spacer" />}
         <div className="admin-tree-name"><strong>{node.nameRu}</strong><small className="admin-muted">/{node.slug}{node.nameRo ? ` · RO: ${node.nameRo}` : ""}</small></div>
         <span className="admin-tree-count">{node.parts} дет. · {node.inStock} в наличии</span>
         {!node.visible && <span className="admin-chip">Скрыта</span>}
         <div className="admin-tree-actions">
-          <button aria-label="Выше" className="admin-icon-button" disabled={busy} onClick={() => void shift(node, -1)} type="button"><ChevronUp size={16} /></button>
-          <button aria-label="Ниже" className="admin-icon-button" disabled={busy} onClick={() => void shift(node, 1)} type="button"><ChevronDown size={16} /></button>
-          <button aria-label="Вложить" className="admin-icon-button" disabled={busy} onClick={() => void indent(node)} type="button"><CornerDownRight size={16} /></button>
-          <button aria-label="На уровень выше" className="admin-icon-button" disabled={busy || !node.parentId} onClick={() => void outdent(node)} type="button"><CornerLeftUp size={16} /></button>
-          <button aria-label={node.visible ? "Скрыть на сайте" : "Показать на сайте"} className="admin-icon-button" disabled={busy} onClick={() => void run({ action: "save-category", ...toDraft(node), visible: !node.visible }, node.visible ? "Категория скрыта с сайта" : "Категория снова видна на сайте")} type="button">{node.visible ? <Eye size={16} /> : <EyeOff size={16} />}</button>
+          <button aria-label="Выше" className="admin-icon-button" disabled={busy} onClick={async () => void (await shift(node, -1))} type="button"><ChevronUp size={16} /></button>
+          <button aria-label="Ниже" className="admin-icon-button" disabled={busy} onClick={async () => void (await shift(node, 1))} type="button"><ChevronDown size={16} /></button>
+          <button aria-label="Вложить" className="admin-icon-button" disabled={busy} onClick={async () => void (await indent(node))} type="button"><CornerDownRight size={16} /></button>
+          <button aria-label="На уровень выше" className="admin-icon-button" disabled={busy || !node.parentId} onClick={async () => void (await outdent(node))} type="button"><CornerLeftUp size={16} /></button>
+          <button aria-label={node.visible ? "Скрыть на сайте" : "Показать на сайте"} className="admin-icon-button" disabled={busy} onClick={async () => void (await run({ action: "save-category", ...toDraft(node), visible: !node.visible }, node.visible ? "Категория скрыта с сайта" : "Категория снова видна на сайте"))} type="button">{node.visible ? <Eye size={16} /> : <EyeOff size={16} />}</button>
           <button aria-label="Изменить" className="admin-icon-button" onClick={() => { setDraft(toDraft(node)); setSlugUnlocked(false); setError(""); }} type="button"><Pencil size={16} /></button>
           <button aria-label="Удалить" className="admin-icon-button" onClick={() => { setRemoving(node); setMoveTo(""); setError(""); }} type="button"><Trash size={16} /></button>
         </div>
@@ -125,7 +125,7 @@ export function CategoryTree({ tree, flat }: { tree: CategoryNode[]; flat: Categ
         </div>
         <SingleImageField help="Если картинки нет, в меню останется только название." label="Картинка категории" onChange={(next) => setDraft({ ...draft, image: next })} preset="category" value={draft.image} />
         {error && <p className="admin-error" role="alert">{error}</p>}
-        <div className="admin-image-actions"><button className="admin-button" disabled={busy} onClick={() => void save()} type="button">{busy ? "Сохраняем…" : "Сохранить"}</button><button className="admin-ghost-button" onClick={() => setDraft(null)} type="button">Отмена</button></div>
+        <div className="admin-image-actions"><button className="admin-button" disabled={busy} onClick={async () => void (await save())} type="button">{busy ? "Сохраняем…" : "Сохранить"}</button><button className="admin-ghost-button" onClick={() => setDraft(null)} type="button">Отмена</button></div>
       </section>
     </div>}
 

@@ -8,7 +8,7 @@ export const cookieName = "naa_staff_session";
 export const cookieOptions = { httpOnly: true, sameSite: "strict" as const, secure: process.env.NODE_ENV === "production", path: "/", maxAge: 30 * 24 * 60 * 60 };
 export async function currentStaff(): Promise<Staff | null> {
   const token = (await cookies()).get(cookieName)?.value;
-  return session(token);
+  return (await session(token));
 }
 export async function requireStaff(role?: Role): Promise<Staff> {
   const staff = await currentStaff();

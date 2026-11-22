@@ -8,7 +8,7 @@ describe("getHomepage", () => {
 
     expect(homepage.heroSlides).toHaveLength(2);
     expect(homepage.heroSlides.every((slide) => slide.isEnabled)).toBe(true);
-    expect(homepage.heroSlides[0]?.ctaHref).toBe("/catalog/mercedes");
+    expect(homepage.heroSlides[0]?.ctaHref).toBe("/catalog/legkovye/mercedes-benz");
   });
 
   it("returns visible category data", async () => {

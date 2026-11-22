@@ -190,8 +190,8 @@ export function AddPartWizard({ donors, types, categories, makes, locations, typ
         <p className="admin-note">Дневной свет, ровный фон, деталь целиком. Номер и бирку снимайте отдельным кадром и ставьте отметку «крупный план» — по ней потом ищут деталь.</p>
         <ImagePicker
           help="До шести фото. Первое станет обложкой."
-          label={`Фото детали (${photos.length} из 6)`}
-          onChange={(next) => { const src = next.part; if (src && photos.length < 6) setPhotos([...photos, { src, preview: next.preview ?? "", closeup: false }]); }}
+          label={`Фото детали (${photos.length} из 10)`}
+          onChange={(next) => { const src = next.part; if (src && photos.length < 10) setPhotos([...photos, { src, preview: next.preview ?? "", closeup: false }]); }}
           presets={["part"]}
           previewPreset="part-preview"
           value={{}}
@@ -199,7 +199,7 @@ export function AddPartWizard({ donors, types, categories, makes, locations, typ
         <ImagePicker
           help="Отдельный кадр ближе: номер, бирка или дефект."
           label="Крупный план"
-          onChange={(next) => { const src = next["part-closeup"]; if (src && photos.length < 6) setPhotos([...photos, { src, preview: next.preview ?? "", closeup: true }]); }}
+          onChange={(next) => { const src = next["part-closeup"]; if (src && photos.length < 10) setPhotos([...photos, { src, preview: next.preview ?? "", closeup: true }]); }}
           presets={["part-closeup"]}
           previewPreset="part-preview"
           value={{}}

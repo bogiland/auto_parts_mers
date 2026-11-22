@@ -8,5 +8,5 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const customer = await currentCustomer();
   if (!customer) return Response.json({ customer: null }, { headers: { "Cache-Control": "no-store" } });
-  return Response.json({ customer, addresses: listAddresses(customer.id) }, { headers: { "Cache-Control": "no-store" } });
+  return Response.json({ customer, addresses: (await listAddresses(customer.id)) }, { headers: { "Cache-Control": "no-store" } });
 }

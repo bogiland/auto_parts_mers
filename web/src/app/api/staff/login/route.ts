@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   const phone = typeof body?.phone === "string" ? body.phone : "";
   const password = typeof body?.password === "string" ? body.password : "";
   if (phone.length > 50 || password.length > 200) return Response.json({ message: "Неверный телефон или пароль" }, { status: 401 });
-  const result = login(phone, password);
+  const result = (await login(phone, password));
   if (!result) return Response.json({ message: "Неверный телефон или пароль" }, { status: 401 });
   (await cookies()).set(cookieName, result.token, cookieOptions);
   return Response.json({ role: result.staff.role }, { headers: { "Cache-Control": "no-store" } });

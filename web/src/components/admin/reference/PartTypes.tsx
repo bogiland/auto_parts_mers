@@ -52,7 +52,7 @@ export function PartTypes({ types, categories }: { types: PartType[]; categories
         </div>
         <div className="admin-tree-actions">
           <button aria-label="Изменить" className="admin-icon-button" onClick={() => { setDraft({ ...type }); setError(""); }} type="button"><Pencil size={16} /></button>
-          <button aria-label="Удалить" className="admin-icon-button" disabled={busy} onClick={() => { if (window.confirm(`Удалить тип «${type.nameRu}»?`)) void run({ action: "delete-part-type", id: type.id }, "Тип удалён"); }} type="button"><Trash size={16} /></button>
+          <button aria-label="Удалить" className="admin-icon-button" disabled={busy} onClick={async () => { if (window.confirm(`Удалить тип «${type.nameRu}»?`)) void (await run({ action: "delete-part-type", id: type.id }, "Тип удалён")); }} type="button"><Trash size={16} /></button>
         </div>
       </div>)}
       {!types.length && <p className="admin-muted">Типов пока нет. Начните с тех, что встречаются чаще всего: «Фара», «Дверь», «Двигатель», «КПП».</p>}

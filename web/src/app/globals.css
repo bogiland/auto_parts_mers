@@ -5,12 +5,13 @@
   --breakpoint-md: 48rem;
   --breakpoint-lg: 62rem;
   --breakpoint-desktop: 75rem;
+  --breakpoint-xl: 75rem;
   --breakpoint-2xl: 87.5rem;
 
   --font-sans: var(--font-roboto), "Helvetica Neue", Arial, sans-serif;
 
-  --color-accent: #df1420;
-  --color-accent-hover: #c4111c;
+  --color-accent: #df2723;
+  --color-accent-hover: #c6201d;
   --color-success: #22c55e;
   --color-ink: #000a12;
   --color-ink-2: #666c71;
@@ -64,7 +65,6 @@
 :root {
   --logo-w: 160px;
   --header-row-height: 72px;
-  --header-row-pinned-height: 64px;
   --header-mobile-row-height: 56px;
   --header-mobile-search-height: 44px;
   --header-search-max-width: 760px;
@@ -72,7 +72,6 @@
   --header-top-offset: 30px;
   --deal-desktop-padding: 18px;
   --deal-desktop-image-size: 140px;
-  --brand-tile-height: 64px;
   --search-suggestions-height: 480px;
   --fs-section: 20px;
   --lh-section: 26px;
@@ -157,28 +156,22 @@
 .header-mobile-row { height: var(--header-mobile-row-height); }
 .header-mobile-search { height: var(--header-mobile-search-height); }
 .header-desktop-row { min-height: var(--header-row-height); }
-.header-desktop-row--pinned { box-shadow: var(--shadow-card); height: var(--header-row-pinned-height); left: 0; min-height: var(--header-row-pinned-height); position: fixed; right: 0; top: 0; z-index: 50; }
-.header-desktop-row-spacer { height: var(--header-row-height); }
-.header-desktop-row-spacer--pinned { height: var(--header-row-pinned-height); }
 .header-mobile-nav { gap: 20px; scroll-snap-type: none; }
 .cart-product-image { height: 72px; width: 72px; }
 @media (min-width: 768px) { .cart-product-image { height: 96px; width: 96px; } }
 .category-tile-image { height: 96px; width: 96px; }
-.brand-tile { height: var(--brand-tile-height); }
 .search-suggestions { max-height: var(--search-suggestions-height); }
 .hero-banner-viewport { aspect-ratio: 686 / 400; }
 .deal-product-image { height: var(--deal-desktop-image-size); width: var(--deal-desktop-image-size); }
 
 @media (min-width: 768px) {
-  .brand-tile { --brand-tile-height: 88px; }
   .hero-banner-viewport { aspect-ratio: 1152 / 480; }
 }
 
 @media (min-width: 1200px) {
   .hero-banner-viewport { aspect-ratio: 1320 / 560; }
   .hero-layout { display: flex; gap: 16px; }
-  .hero-banner-column { flex: 0 1 66.24%; }
-  .deal-week-column { flex: 0 1 32.56%; }
+  .hero-banner-column { flex: 1 1 100%; }
   .deal-desktop-card { padding: var(--deal-desktop-padding); }
   .category-tile-image { height: 120px; width: 120px; }
 }
@@ -320,4 +313,35 @@ button { cursor: pointer; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 1ms !important; }
+}
+
+/* Три точки «волной» — заглушка, пока страница грузится. */
+@keyframes naa-dot-wave {
+  0%, 60%, 100% { transform: scale(0.55); opacity: 0.35; }
+  30% { transform: scale(1); opacity: 1; }
+}
+.dots-loader span { animation: naa-dot-wave 1.1s ease-in-out infinite; }
+.dots-loader span:nth-child(2) { animation-delay: 0.15s; }
+.dots-loader span:nth-child(3) { animation-delay: 0.3s; }
+@media (prefers-reduced-motion: reduce) {
+  .dots-loader span { animation: none; opacity: 0.6; transform: none; }
+}
+
+.home-carousel-track { touch-action: pan-y pinch-zoom; }
+.home-carousel-slide { grid-area: 1 / 1; }
+.home-carousel-slide[data-state="hidden"] { visibility: hidden; }
+@media (prefers-reduced-motion: no-preference) {
+  .home-carousel-track { --slide-offset: 100%; }
+  .home-carousel-track[data-backward="true"] { --slide-offset: -100%; }
+  .home-carousel-slide[data-state="enter"] { animation: home-slide-enter 2s ease-in-out both; }
+  .home-carousel-slide[data-state="exit"] { animation: home-slide-exit 2s ease-in-out both; }
+  @keyframes home-slide-enter { from { transform: translateX(var(--slide-offset)); } }
+  @keyframes home-slide-exit { to { transform: translateX(calc(-1 * var(--slide-offset))); visibility: hidden; } }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-carousel-slide[data-state="exit"] { visibility: hidden; }
+}
+
+@layer utilities {
+  .support-launcher { bottom: calc(var(--spacing-tabbar) + var(--spacing) * 4 + env(safe-area-inset-bottom)); }
 }

@@ -47,7 +47,7 @@ export function VehicleTree({ makes }: { makes: VehicleMake[] }) {
           <div className="admin-tree-actions">
             <button className="admin-ghost-button" onClick={() => { setModelDraft({ id: null, makeId: make.id, name: "" }); setError(""); }} type="button"><Plus size={14} />Модель</button>
             <button aria-label="Изменить марку" className="admin-icon-button" onClick={() => { setMakeDraft({ id: make.id, name: make.name, logo: make.logo }); setError(""); }} type="button"><Pencil size={16} /></button>
-            <button aria-label="Удалить марку" className="admin-icon-button" disabled={busy} onClick={() => { if (window.confirm(`Удалить марку «${make.name}»?`)) void run({ action: "delete-vehicle", level: "make", id: make.id }, "Марка удалена"); }} type="button"><Trash size={16} /></button>
+            <button aria-label="Удалить марку" className="admin-icon-button" disabled={busy} onClick={async () => { if (window.confirm(`Удалить марку «${make.name}»?`)) void (await run({ action: "delete-vehicle", level: "make", id: make.id }, "Марка удалена")); }} type="button"><Trash size={16} /></button>
           </div>
         </div>
         {open.includes(make.id) && <div className="admin-tree-children">
@@ -58,7 +58,7 @@ export function VehicleTree({ makes }: { makes: VehicleMake[] }) {
               <div className="admin-tree-actions">
                 <button className="admin-ghost-button" onClick={() => { setGenerationDraft({ id: null, modelId: model.id, name: "", yearFrom: "", yearTo: "", engines: "" }); setError(""); }} type="button"><Plus size={14} />Поколение</button>
                 <button aria-label="Изменить модель" className="admin-icon-button" onClick={() => { setModelDraft({ id: model.id, makeId: make.id, name: model.name }); setError(""); }} type="button"><Pencil size={16} /></button>
-                <button aria-label="Удалить модель" className="admin-icon-button" disabled={busy} onClick={() => { if (window.confirm(`Удалить модель «${model.name}»?`)) void run({ action: "delete-vehicle", level: "model", id: model.id }, "Модель удалена"); }} type="button"><Trash size={16} /></button>
+                <button aria-label="Удалить модель" className="admin-icon-button" disabled={busy} onClick={async () => { if (window.confirm(`Удалить модель «${model.name}»?`)) void (await run({ action: "delete-vehicle", level: "model", id: model.id }, "Модель удалена")); }} type="button"><Trash size={16} /></button>
               </div>
             </div>
             {open.includes(model.id) && <div className="admin-tree-children">
@@ -67,7 +67,7 @@ export function VehicleTree({ makes }: { makes: VehicleMake[] }) {
                 <div className="admin-tree-name"><strong>{generation.name}</strong><small className="admin-muted">{generation.yearFrom ?? "?"}–{generation.yearTo ?? "наст. время"}{generation.engines ? ` · ${generation.engines}` : ""}</small></div>
                 <div className="admin-tree-actions">
                   <button aria-label="Изменить поколение" className="admin-icon-button" onClick={() => { setGenerationDraft({ id: generation.id, modelId: model.id, name: generation.name, yearFrom: generation.yearFrom ? String(generation.yearFrom) : "", yearTo: generation.yearTo ? String(generation.yearTo) : "", engines: generation.engines }); setError(""); }} type="button"><Pencil size={16} /></button>
-                  <button aria-label="Удалить поколение" className="admin-icon-button" disabled={busy} onClick={() => { if (window.confirm(`Удалить поколение «${generation.name}»?`)) void run({ action: "delete-vehicle", level: "generation", id: generation.id }, "Поколение удалено"); }} type="button"><Trash size={16} /></button>
+                  <button aria-label="Удалить поколение" className="admin-icon-button" disabled={busy} onClick={async () => { if (window.confirm(`Удалить поколение «${generation.name}»?`)) void (await run({ action: "delete-vehicle", level: "generation", id: generation.id }, "Поколение удалено")); }} type="button"><Trash size={16} /></button>
                 </div>
               </div>)}
               {!model.generations.length && <p className="admin-muted">Поколения не заведены.</p>}

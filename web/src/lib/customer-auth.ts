@@ -15,7 +15,7 @@ export const customerCookieOptions = {
 };
 
 export async function currentCustomer(): Promise<Customer | null> {
-  return customerBySession((await cookies()).get(customerCookie)?.value);
+  return (await customerBySession((await cookies()).get(customerCookie)?.value));
 }
 
 export async function requireCustomer(): Promise<Customer> {

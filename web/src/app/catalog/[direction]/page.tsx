@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: CatalogDirectionPageProps): P
 }
 
 export default async function CatalogDirectionPage({ params, searchParams }: CatalogDirectionPageProps) {
-  const [{ direction: segment }, homepage, query] = await Promise.all([params, getLiveHomepage(), searchParams]);
+  const [{ direction: segment }, homepage, query] = await Promise.all([params, (await getLiveHomepage()), searchParams]);
   const direction = getDirectionHome(segment);
   if (direction) return <><SiteHeader hours={homepage.hours} phone={homepage.phone} /><DirectionHome direction={direction} homepage={homepage} /><SiteFooter /></>;
 

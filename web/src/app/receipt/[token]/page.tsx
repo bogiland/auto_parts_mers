@@ -15,7 +15,7 @@ const when = (value: string) => new Intl.DateTimeFormat("ru-RU", { dateStyle: "s
 
 export default async function ReceiptPage({ params, searchParams }: Props) {
   const [{ token }, query] = await Promise.all([params, searchParams]);
-  const receipt = receiptByToken(token);
+  const receipt = (await receiptByToken(token));
   if (!receipt) notFound();
   const invoice = query.doc === "invoice";
   const title = invoice ? receipt.invoiceTitle : "Товарный чек";

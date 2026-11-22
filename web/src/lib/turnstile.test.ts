@@ -1,0 +1,8 @@
+import {afterEach,describe,expect,it,vi} from 'vitest';
+import {verifyTurnstile} from './turnstile';
+afterEach(()=>{vi.unstubAllEnvs();vi.restoreAllMocks();});
+describe('Turnstile verification',()=>{
+ it('requires Cloudflare success and the configured hostname',async()=>{vi.stubEnv('TURNSTILE_SECRET_KEY','test-secret');vi.stubEnv('NEXT_PUBLIC_SITE_URL','https://example.test');const mock=vi.spyOn(globalThis,'fetch').mockResolvedValue(new Response(JSON.stringify({success:true,hostname:'example.test'})));expect(await verifyTurnstile('token')).toBe(true);mock.mockResolvedValue(new Response(JSON.stringify({success:true,hostname:'evil.test'})));expect(await verifyTurnstile('token')).toBe(false);mock.mockResolvedValue(new Response(JSON.stringify({success:false})));expect(await verifyTurnstile('token')).toBe(false);});
+ it('fails closed when the service fails or secret is missing',async()=>{vi.stubEnv('TURNSTILE_SECRET_KEY','test-secret');vi.spyOn(globalThis,'fetch').mockRejectedValue(new Error('offline'));expect(await verifyTurnstile('token')).toBe(false);vi.stubEnv('TURNSTILE_SECRET_KEY','');expect(await verifyTurnstile('token')).toBe(false);});
+ it('rejects test secrets and missing public URL in production',async()=>{vi.stubEnv('NODE_ENV','production');vi.stubEnv('TURNSTILE_SECRET_KEY','1x0000000000000000000000000000000AA');vi.stubEnv('NEXT_PUBLIC_SITE_URL','https://example.test');expect(await verifyTurnstile('token')).toBe(false);vi.stubEnv('TURNSTILE_SECRET_KEY','production-secret');vi.stubEnv('NEXT_PUBLIC_SITE_URL','');expect(await verifyTurnstile('token')).toBe(false);});
+});

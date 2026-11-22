@@ -5,23 +5,18 @@ import { type FormEvent, useState } from "react";
 
 import { PhoneInput } from "@/components/forms/PhoneInput";
 import { SectionTitle } from "@/components/ui/SectionTitle";
-
-type Tab = "expert" | "model";
+import { HomeVehiclePicker } from "./HomeVehiclePicker";
 
 const selectClassName = "h-control min-w-0 rounded-ui border border-line bg-white px-3 text-body text-ink outline-none focus:border-accent disabled:cursor-not-allowed disabled:text-ink-3";
 
-export function ExpertMatchTabs() {
-  const [activeTab, setActiveTab] = useState<Tab>("expert");
+export function ExpertMatchTabs({ cars = [] }: { cars?: { id: string; make: string; model: string; generation: string }[] }) {
+  const [tab, setTab] = useState("expert");
   const [phone, setPhone] = useState("");
   const [phoneValid, setPhoneValid] = useState(false);
   const [showPhoneError, setShowPhoneError] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [sending, setSending] = useState(false);
-  const [model, setModel] = useState("");
-  const [body, setBody] = useState("");
-  const [year, setYear] = useState("");
-  const [engine, setEngine] = useState("");
 
   async function submitExpertRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -39,14 +34,10 @@ export function ExpertMatchTabs() {
 
   return (
     <section aria-labelledby="expert-match-title" className="min-w-0" id="expert-request">
-      <SectionTitle id="expert-match-title" mobileChildren="Не уверены в подборе? Эксперт поможет бесплатно">Сомневаетесь в самостоятельном подборе? Эксперт подберёт запчасти бесплатно</SectionTitle>
-      <div className="flex items-end" role="tablist" aria-label="Способ подбора запчастей">
-        <button aria-controls="expert-panel" aria-selected={activeTab === "expert"} className={`rounded-t-ui px-3 py-3 text-nav font-bold ${activeTab === "expert" ? "bg-surface-2 text-ink" : "text-ink-2 hover:text-ink"}`} id="expert-tab" onClick={() => setActiveTab("expert")} role="tab" type="button">Помощь эксперта</button>
-        <button aria-controls="model-panel" aria-selected={activeTab === "model"} className={`rounded-t-ui px-3 py-3 text-nav font-bold ${activeTab === "model" ? "bg-surface-2 text-ink" : "text-ink-2 hover:text-ink"}`} id="model-tab" onClick={() => setActiveTab("model")} role="tab" type="button">Подбор по модели</button>
-      </div>
-      <div className={`min-w-0 rounded-ui bg-surface-2 p-4 ${activeTab === "expert" ? "rounded-tl-none" : ""}`}>
-        {activeTab === "expert" ? (
-          <div aria-labelledby="expert-tab" id="expert-panel" role="tabpanel">
+      <SectionTitle id="expert-match-title">Сомневаетесь в самостоятельном подборе? Эксперт подберёт запчасти бесплатно</SectionTitle>
+      <div className="mt-4 flex min-w-0" role="tablist" aria-label="Подбор запчастей">{[["expert", "Помощь эксперта"], ["vehicle", "Подбор по модели"]].map(([value, label]) => <button key={value} role="tab" aria-selected={tab === value} className={`rounded-ui px-4 py-3 text-nav font-bold ${tab === value ? "bg-surface-2 text-ink" : "text-ink-2"}`} onClick={() => setTab(value)} type="button">{label}</button>)}</div>
+      {tab === "vehicle" ? <HomeVehiclePicker cars={cars} /> : <div className="min-w-0 rounded-ui bg-surface-2 p-4">
+          <div>
             {submitted ? <p className="text-body text-ink-2">Заявка принята. Оператор свяжется с вами с 8:00 до 20:00.</p> : (
               <form onSubmit={submitExpertRequest}>
                 <div className="grid min-w-0 grid-cols-1 gap-2 md:grid-cols-2 desktop:grid-cols-[1fr_1fr_1fr_auto]">
@@ -61,17 +52,7 @@ export function ExpertMatchTabs() {
               </form>
             )}
           </div>
-        ) : (
-          <form action="/catalog/legkovye" aria-labelledby="model-tab" className="grid min-w-0 grid-cols-1 gap-2 md:grid-cols-2 desktop:grid-cols-6" id="model-panel" role="tabpanel">
-            <select aria-label="Марка" className={selectClassName} disabled value="mercedes"><option value="mercedes">Mercedes-Benz</option></select>
-            <select aria-label="Модель" className={selectClassName} onChange={(event) => { setModel(event.target.value); setBody(""); setYear(""); setEngine(""); }} value={model}><option value="">Модель</option><option value="c-class">C-Class</option><option value="e-class">E-Class</option><option value="gle">GLE</option></select>
-            <select aria-label="Кузов" className={selectClassName} disabled={!model} onChange={(event) => { setBody(event.target.value); setYear(""); setEngine(""); }} value={body}><option value="">Кузов</option><option value="sedan">Седан</option><option value="wagon">Универсал</option></select>
-            <select aria-label="Год" className={selectClassName} disabled={!body} onChange={(event) => { setYear(event.target.value); setEngine(""); }} value={year}><option value="">Год</option><option value="2024">2024</option><option value="2023">2023</option><option value="2022">2022</option></select>
-            <select aria-label="Двигатель" className={selectClassName} disabled={!year} onChange={(event) => setEngine(event.target.value)} value={engine}><option value="">Двигатель</option><option value="2l">2.0 л</option><option value="3l">3.0 л</option></select>
-            <button className="h-control w-full rounded-ui bg-accent px-6 text-btn font-bold text-white hover:bg-accent-hover md:col-span-2 desktop:col-span-1 desktop:w-auto" disabled={!engine} type="submit">Найти</button>
-          </form>
-        )}
-      </div>
+      </div>}
     </section>
   );
 }

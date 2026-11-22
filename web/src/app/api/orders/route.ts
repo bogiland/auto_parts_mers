@@ -18,10 +18,10 @@ export async function POST(request: Request) {
   if (typeof input.comment !== "string" || input.comment.length > 2000) return invalid("comment", "Комментарий слишком длинный.");
   if (!Array.isArray(input.items)) return invalid("items", "Проверьте состав корзины.");
   try {
-    const order = createOrder(input);
+    const order = (await createOrder(input));
     // Заказ вошедшего покупателя сразу виден в его истории заказов.
     const customer = await currentCustomer();
-    if (customer) attachOrderToCustomer(order.number - 1000, customer.id);
+    if (customer) (await attachOrderToCustomer(order.number - 1000, customer.id));
     return Response.json(order, { status: 201, headers: { "Cache-Control": "no-store" } });
   }
   catch (error) {

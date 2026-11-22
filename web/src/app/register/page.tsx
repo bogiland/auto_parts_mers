@@ -13,7 +13,7 @@ export const metadata = { title: "Регистрация — NAA.md", robots: { 
 
 export default async function RegisterPage() {
   if (await currentCustomer()) redirect("/account");
-  const homepage = await getLiveHomepage();
+  const homepage = await getLiveHomepage({ includeInventory: false });
   return <>
     <SiteHeader hours={homepage.hours} phone={homepage.phone} />
     <main className="container-site section-stack">

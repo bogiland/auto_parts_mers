@@ -47,7 +47,7 @@ export function CheckoutPage() {
   // Вошедшему покупателю не нужно вводить имя, телефон и адрес заново.
   useEffect(() => {
     fetch("/api/account/me", { cache: "no-store" })
-      .then((response) => (response.ok ? response.json() : null))
+      .then(async (response) => (response.ok ? response.json() : null))
       .then((data: { customer: { name: string; surname: string; phone: string } | null; addresses?: { street: string; city: string; isDefault: boolean }[] } | null) => {
         if (!data?.customer) return;
         setAccount(data.customer);

@@ -11,6 +11,20 @@ const salt = randomBytes(16);
 const passwordHash = `${salt.toString("hex")}:${scryptSync(secret, salt, 64).toString("hex")}`;
 const ownerPhone = "+37377776301", operatorPhone = "+37377776302";
 const root = "http://localhost:3000";
+// next dev иногда отдаёт пустую страницу: он читает ещё не дописанный манифест и падает
+// с «Unexpected end of JSON input». Это сбой сборщика, а не приложения, поэтому один повтор.
+async function openDashboard(page) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await page.goto(`${root}/admin/dashboard`);
+    try {
+      await page.getByRole("heading", { name: "Дашборд" }).waitFor({ timeout: 15000 });
+      return;
+    } catch (error) {
+      if (attempt === 2) throw error;
+      await page.waitForTimeout(3000);
+    }
+  }
+}
 try {
   for (const row of db.prepare("SELECT id FROM staff_users WHERE phone IN (?,?)").all(ownerPhone, operatorPhone)) db.prepare("DELETE FROM staff_sessions WHERE user_id=?").run(row.id);
   db.prepare("DELETE FROM staff_users WHERE phone IN (?,?)").run(ownerPhone, operatorPhone);
@@ -22,8 +36,7 @@ try {
       const response = await context.request.post(`${root}/api/staff/login`, { headers: { origin: root }, data: { phone, password: secret } });
       if (response.status() !== 200) throw new Error(`Login ${role}: ${response.status()}`);
       const page = await context.newPage();
-      await page.goto(`${root}/admin/dashboard`);
-      await page.getByRole("heading", { name: "Дашборд" }).waitFor();
+      await openDashboard(page);
       if (role === "operator") {
         if (await page.getByRole("link", { name: "Настройки" }).count()) throw new Error("Owner menu shown to operator");
         const protectedResponse = await page.goto(`${root}/admin/settings`);

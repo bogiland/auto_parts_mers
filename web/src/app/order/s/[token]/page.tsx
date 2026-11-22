@@ -12,8 +12,8 @@ export const metadata: Metadata = { title: "Статус заказа — NAA.md
 export default async function Page({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   if (!/^[a-f0-9-]{36}$/i.test(token)) notFound();
-  const order = getOrderByToken(token);
+  const order = (await getOrderByToken(token));
   if (!order) notFound();
-  const homepage = await getLiveHomepage();
+  const homepage = await getLiveHomepage({ includeInventory: false });
   return <><SiteHeader hours={homepage.hours} phone={homepage.phone} /><OrderStatus order={order} /><SiteFooter /></>;
 }

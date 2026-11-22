@@ -16,6 +16,7 @@
     { "id": "transfer", "title": "Перевод после подтверждения" }
   ],
   "messengers": { "viber": "", "telegram": "" },
+  "socials": { "whatsapp": "", "instagram": "", "youtube": "", "messenger": "" },
   "receipt": {
     "header": "NAA.md — разборка автомобилей, Слободзея",
     "requisites": "Слободзея, ул. Новосовицкая 25\nРежим работы точки: 9:00-18:00\nОператор отвечает: 8:00-20:00",

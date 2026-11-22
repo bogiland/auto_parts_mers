@@ -1,10 +1,12 @@
 import Image from "next/image";
+import {AdSlot} from "@/components/ads/AdSlot";
 import Link from "next/link";
 import { BriefcaseBusiness, ChevronDown } from "lucide-react";
 
 import { FooterAbout } from "./FooterAbout";
 import { FooterContacts } from "./FooterContacts";
 import { pageLinks } from "@/lib/pages-db";
+import { vacancies as openVacancies } from "@/lib/vacancies";
 import type { ReactNode } from "react";
 
 // Ссылки «О компании» и «Покупателям» берутся из раздела «Сайт → Страницы»:
@@ -21,15 +23,16 @@ function MobileFooterSection({ children, title }: { children: ReactNode; title: 
   return <details className="group border-b border-white/10"><summary className="flex h-12 cursor-pointer list-none items-center justify-between text-accent"><span className="text-lead font-bold">{title}</span><ChevronDown aria-hidden="true" className="transition-transform group-open:rotate-180" size={20} /></summary><div className="pb-4">{children}</div></details>;
 }
 
-export function SiteFooter() {
-  const companyLinks = pageLinks("footer-company");
-  const buyerLinks = pageLinks("footer-buyer");
+export async function SiteFooter() {
+  const companyLinks = [...(await pageLinks("footer-company")),{label:'Реклама на сайте',href:'/advertising'}];
+  const buyerLinks = (await pageLinks("footer-buyer"));
   const categories = categoryLinks.map(([label, href]) => ({ label, href }));
-  const vacancies = companyLinks.find((link) => link.href === "/vacancies");
+  const vacancies = (await openVacancies()).length ? companyLinks.find((link) => link.href === "/vacancies") : undefined;
 
   return (
     <footer className="bg-header-dark pb-tabbar text-white desktop:pb-0">
       {vacancies && <section className="bg-header py-6 text-white"><div className="container-site flex flex-wrap items-center gap-4 md:gap-6"><BriefcaseBusiness aria-hidden="true" className="text-accent" size={24} /><strong className="text-body font-bold">Присоединяйтесь к команде</strong><span className="relative block h-6 w-40 overflow-hidden"><Image alt="NAA.md" className="absolute top-1/2 h-auto w-full -translate-y-1/2" height={289} src="/images/brand/naa-logo-transparent.png" width={863} /></span><Link className="inline-flex h-btn items-center rounded-ui bg-accent px-4 text-btn font-bold text-white hover:bg-accent-hover" href={vacancies.href}>{vacancies.label}</Link></div></section>}
+      <div className="container-site"><AdSlot slot="footer" /></div>
       <FooterAbout copy={aboutCopy} />
       <div className="container-site py-8">
         <div className="hidden grid-cols-5 gap-8 desktop:grid">

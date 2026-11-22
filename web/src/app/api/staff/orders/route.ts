@@ -12,7 +12,7 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   if (!sameOrigin(request)) return new Response(null, { status: 403 });
-  const actor = session((await cookies()).get(cookieName)?.value);
+  const actor = (await session((await cookies()).get(cookieName)?.value));
   if (!actor) return new Response(null, { status: 401 });
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object") return new Response(null, { status: 400 });
@@ -23,34 +23,34 @@ export async function POST(request: Request) {
   };
   try {
     switch (body.action) {
-      case "order-status": changeStatus(actor, id(), String(body.status), body.version, typeof body.comment === "string" ? body.comment : ""); break;
-      case "delivery-cost": setDeliveryCost(actor, id(), body.cost, body.version); break;
-      case "order-notes": setOrderNotes(actor, id(), body.notes, body.version); break;
-      case "against-advice": setAgainstAdvice(actor, id(), body.value === true, body.version); break;
-      case "issue-photos": return json({ ok: true, photos: setIssuePhotos(actor, id(), body.photos, body.version) });
+      case "order-status": (await changeStatus(actor, id(), String(body.status), body.version, typeof body.comment === "string" ? body.comment : "")); break;
+      case "delivery-cost": (await setDeliveryCost(actor, id(), body.cost, body.version)); break;
+      case "order-notes": (await setOrderNotes(actor, id(), body.notes, body.version)); break;
+      case "against-advice": (await setAgainstAdvice(actor, id(), body.value === true, body.version)); break;
+      case "issue-photos": return json({ ok: true, photos: (await setIssuePhotos(actor, id(), body.photos, body.version)) });
       case "receipt": {
-        const result = buildReceipt(actor, id(), body.version, new URL(request.url).origin);
+        const result = (await buildReceipt(actor, id(), body.version, new URL(request.url).origin));
         return json({ ok: true, ...result, url: `/receipt/${result.token}` });
       }
-      case "fiscal-number": setFiscalNumber(actor, id(), body.value, body.version); break;
-      case "delivery-method": setDeliveryMethod(actor, id(), body.method, body.address, body.version); break;
-      case "payment-method": setPaymentMethod(actor, id(), body.method, body.version); break;
+      case "fiscal-number": (await setFiscalNumber(actor, id(), body.value, body.version)); break;
+      case "delivery-method": (await setDeliveryMethod(actor, id(), body.method, body.address, body.version)); break;
+      case "payment-method": (await setPaymentMethod(actor, id(), body.method, body.version)); break;
       case "order-detail": {
-        const order = orderDetail(id());
+        const order = (await orderDetail(id()));
         if (!order) throw new Error("Заказ не найден.");
-        return json({ ok: true, order, returns: returnsOfOrder(order.id), message: messageTemplates(order, getSettings()) });
+        return json({ ok: true, order, returns: (await returnsOfOrder(order.id)), message: messageTemplates(order, (await getSettings())) });
       }
-      case "create-return": createReturn(actor, body); break;
-      case "create-call-order": return json({ ok: true, ...createCallOrder(actor, body) });
-      case "client-lookup": return json({ ok: true, client: clientByPhone(String(body.phone ?? "")) });
-      case "search-parts": return json({ ok: true, parts: searchParts(String(body.query ?? "")) });
+      case "create-return": (await createReturn(actor, body)); break;
+      case "create-call-order": return json({ ok: true, ...(await createCallOrder(actor, body)) });
+      case "client-lookup": return json({ ok: true, client: (await clientByPhone(String(body.phone ?? ""))) });
+      case "search-parts": return json({ ok: true, parts: (await searchParts(String(body.query ?? ""))) });
       case "order-message": {
-        const order = orderDetail(id());
+        const order = (await orderDetail(id()));
         if (!order) throw new Error("Заказ не найден.");
-        return json({ ok: true, ...messageTemplates(order, getSettings()) });
+        return json({ ok: true, ...messageTemplates(order, (await getSettings())) });
       }
       case "order-phone": {
-        const phone = revealPhone(actor, id());
+        const phone = (await revealPhone(actor, id()));
         return phone ? json({ ok: true, phone }) : new Response(null, { status: 404 });
       }
       default: return new Response(null, { status: 400 });

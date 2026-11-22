@@ -47,8 +47,8 @@ export function SitePages({ pages, placements }: { pages: SitePage[]; placements
     <div className="admin-list">
       {pages.map((page, index) => <div className="admin-card admin-row admin-sub-card" key={page.id}>
         <div className="admin-tree-actions">
-          <button aria-label="Выше" className="admin-icon-button" disabled={busy || index === 0} onClick={() => void run({ action: "move-page", id: page.id, direction: "up" }, "Порядок изменён")} type="button"><ChevronUp size={16} /></button>
-          <button aria-label="Ниже" className="admin-icon-button" disabled={busy || index === pages.length - 1} onClick={() => void run({ action: "move-page", id: page.id, direction: "down" }, "Порядок изменён")} type="button"><ChevronDown size={16} /></button>
+          <button aria-label="Выше" className="admin-icon-button" disabled={busy || index === 0} onClick={async () => void (await run({ action: "move-page", id: page.id, direction: "up" }, "Порядок изменён"))} type="button"><ChevronUp size={16} /></button>
+          <button aria-label="Ниже" className="admin-icon-button" disabled={busy || index === pages.length - 1} onClick={async () => void (await run({ action: "move-page", id: page.id, direction: "down" }, "Порядок изменён"))} type="button"><ChevronDown size={16} /></button>
         </div>
         <div className="admin-tree-name">
           <strong>{page.titleRu}</strong>
@@ -57,9 +57,9 @@ export function SitePages({ pages, placements }: { pages: SitePage[]; placements
         {!page.visible && <span className="admin-chip" data-status="closed">выключена</span>}
         <div className="admin-tree-actions">
           {page.visible && <Link aria-label="Открыть на сайте" className="admin-icon-button" href={`/${page.slug}`} target="_blank"><ExternalLink size={16} /></Link>}
-          <button aria-label={page.visible ? "Выключить" : "Включить"} className="admin-icon-button" disabled={busy} onClick={() => void run({ action: "page-visible", id: page.id, visible: !page.visible }, page.visible ? "Страница выключена" : "Страница включена")} type="button">{page.visible ? <Eye size={16} /> : <EyeOff size={16} />}</button>
+          <button aria-label={page.visible ? "Выключить" : "Включить"} className="admin-icon-button" disabled={busy} onClick={async () => void (await run({ action: "page-visible", id: page.id, visible: !page.visible }, page.visible ? "Страница выключена" : "Страница включена"))} type="button">{page.visible ? <Eye size={16} /> : <EyeOff size={16} />}</button>
           <button aria-label="Изменить" className="admin-icon-button" onClick={() => { setDraft({ ...page }); setError(""); }} type="button"><Pencil size={16} /></button>
-          <button aria-label="Удалить" className="admin-icon-button" disabled={busy} onClick={() => { if (window.confirm(`Удалить страницу «${page.titleRu}»? Ссылки на неё перестанут работать.`)) void run({ action: "delete-page", id: page.id }, "Страница удалена"); }} type="button"><Trash size={16} /></button>
+          <button aria-label="Удалить" className="admin-icon-button" disabled={busy} onClick={async () => { if (window.confirm(`Удалить страницу «${page.titleRu}»? Ссылки на неё перестанут работать.`)) void (await run({ action: "delete-page", id: page.id }, "Страница удалена")); }} type="button"><Trash size={16} /></button>
         </div>
       </div>)}
       {!pages.length && <p className="admin-muted">Страниц пока нет.</p>}
@@ -75,6 +75,11 @@ export function SitePages({ pages, placements }: { pages: SitePage[]; placements
             ? <p className="admin-note admin-field-wide">Адрес страницы: <strong>/{draft.slug}</strong>. У существующей страницы он не меняется — иначе сохранённые и разосланные ссылки перестали бы работать.</p>
             : <label className="admin-field">Адрес страницы<input onChange={(event) => setDraft({ ...draft, slug: event.target.value })} placeholder="delivery" value={draft.slug} /></label>}
           <label className="admin-field admin-field-wide">Текст, русский<textarea onChange={(event) => setDraft({ ...draft, bodyRu: event.target.value })} rows={12} value={draft.bodyRu ?? ""} /></label>
+          {draft.slug === "cars" && <div className="admin-field admin-field-wide">
+            <p>Каждая строка «Авто» автоматически становится отдельной карточкой. Фото можно указать путём к загруженному изображению на сайте.</p>
+            <code>Авто | Название и год | Характеристики | Краткое описание | /путь-к-фото.jpg</code>
+            <button type="button" className="admin-button" onClick={() => setDraft({ ...draft, bodyRu: [draft.bodyRu, "Авто | Марка и модель · год | Двигатель, КПП | Состояние, пробег и цена | "].filter(Boolean).join("\n") })}>Добавить строку автомобиля</button>
+          </div>}
           <label className="admin-field admin-field-wide">Текст, румынский<textarea onChange={(event) => setDraft({ ...draft, bodyRo: event.target.value })} rows={8} value={draft.bodyRo ?? ""} /></label>
           <p className="admin-note admin-field-wide">Разметка простая: строка, начинающаяся с «## », становится подзаголовком, строка с «- » — пунктом списка, пустая строка — новым абзацем. Строка вида «_текст_» превращается в сноску мелким шрифтом — так оформлена пометка о юристе.</p>
           <label className="admin-field">Где показывать ссылку<select onChange={(event) => setDraft({ ...draft, placement: event.target.value as SitePage["placement"] })} value={draft.placement ?? "none"}>{placements.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>

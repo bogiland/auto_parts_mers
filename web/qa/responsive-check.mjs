@@ -16,7 +16,10 @@ for (const width of widths) {
     isMobile: mobile,
     hasTouch: mobile,
   });
-  await page.goto(url, { waitUntil: "domcontentloaded" });
+  const response = await page.goto(url, { waitUntil: "load" });
+  if (!response?.ok()) throw new Error(`HTTP ${response?.status()} at ${width}px`);
+  await page.locator('main').waitFor();
+  if (await page.getByText('Application error:', { exact: false }).count()) throw new Error(`Error page at ${width}px`);
   await page.waitForTimeout(300);
 
   await page.evaluate(async () => {

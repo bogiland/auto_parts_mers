@@ -20,6 +20,8 @@ type Country = (typeof countries)[number];
 interface PhoneInputProps {
   onValueChange: (value: string, isValid: boolean) => void;
   showError?: boolean;
+  /** Уже известный номер в международном виде: подставляется в кабинете при правке данных. */
+  defaultValue?: string;
 }
 
 function nationalDigits(value: string, country: Country) {
@@ -41,9 +43,10 @@ function resolvePastedNumber(value: string, fallback: Country) {
   return { country, national: nationalDigits(national, country) };
 }
 
-export function PhoneInput({ onValueChange, showError = false }: PhoneInputProps) {
-  const [country, setCountry] = useState<Country>(countries[0]);
-  const [national, setNational] = useState("");
+export function PhoneInput({ onValueChange, showError = false, defaultValue = "" }: PhoneInputProps) {
+  const start = useMemo(() => (defaultValue ? resolvePastedNumber(defaultValue, countries[0]) : null), [defaultValue]);
+  const [country, setCountry] = useState<Country>(start?.country ?? countries[0]);
+  const [national, setNational] = useState(start?.national ?? "");
   const [isFocused, setIsFocused] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");

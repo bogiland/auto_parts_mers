@@ -1,11 +1,9 @@
 "use client";
 
 import { LogOut } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export function AccountLogout() {
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
   return <button
     className="flex w-full items-center gap-3 p-4 text-left text-body text-ink hover:text-accent disabled:opacity-60"
@@ -14,9 +12,10 @@ export function AccountLogout() {
       setBusy(true);
       try {
         await fetch("/api/account", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "logout" }) });
-        router.replace("/");
-        router.refresh();
-      } finally {
+        // Полная загрузка: внутренний переход оставил бы в шапке имя уже вышедшего покупателя.
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- смена сессии требует полной загрузки
+        window.location.assign("/");
+      } catch {
         setBusy(false);
       }
     }}

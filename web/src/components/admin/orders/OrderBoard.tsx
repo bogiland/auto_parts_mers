@@ -1,7 +1,7 @@
 "use client";
 // Список заказов: новые сверху, фильтры-чипы, красная метка на заказе, который висит дольше получаса.
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Phone, Plus, Search, X } from "lucide-react";
 import { money, staffCall, waitingLabel, when } from "@/components/admin/staff-client";
@@ -27,9 +27,10 @@ export function OrderBoard({ rows, statusLabels, deliveryMethods, paymentMethods
   viberBase: string; telegramBase: string; openNew?: boolean;
 }) {
   const router = useRouter();
+  const params = useSearchParams();
   const [chip, setChip] = useState<string>("received");
   const [query, setQuery] = useState("");
-  const [active, setActive] = useState<number | null>(null);
+  const [active, setActive] = useState<number | null>(() => Number(params.get('order')) || null);
   const [adding, setAdding] = useState(openNew);
 
   const visible = rows.filter((row) => {
@@ -82,8 +83,9 @@ export function OrderBoard({ rows, statusLabels, deliveryMethods, paymentMethods
 }
 
 function CallOrderForm({ deliveryMethods, paymentMethods, onClose, onCreated }: { deliveryMethods: Option[]; paymentMethods: Option[]; onClose: () => void; onCreated: (id: number) => void }) {
-  const [phone, setPhone] = useState("");
-  const [name, setName] = useState("");
+  const params = useSearchParams();
+  const [phone, setPhone] = useState(params.get('phone') ?? "");
+  const [name, setName] = useState(params.get('name') ?? "");
   const [known, setKnown] = useState<string>("");
   const [address, setAddress] = useState("");
   const [comment, setComment] = useState("");
@@ -135,7 +137,7 @@ function CallOrderForm({ deliveryMethods, paymentMethods, onClose, onCreated }: 
 
       <div className="admin-card admin-sub-card">
         <h3>Детали в заказе</h3>
-        <label className="admin-field"><span className="admin-row"><Search size={16} />Найти деталь по названию или артикулу</span><input onChange={(event) => void find(event.target.value)} value={search} /></label>
+        <label className="admin-field"><span className="admin-row"><Search size={16} />Найти деталь по названию или артикулу</span><input onChange={async (event) => void (await find(event.target.value))} value={search} /></label>
         {found.length > 0 && <div className="admin-list">{found.map((part) => <div className="admin-row" key={part.id}>
           <div className="admin-tree-name"><strong>{part.name}</strong><small className="admin-muted">{part.sku || "без артикула"} · {part.priceMdl === null ? "цена по запросу" : money(part.priceMdl)} · остаток {part.stock}</small></div>
           <button className="admin-icon-button" disabled={items.some((item) => item.id === part.id)} onClick={() => { setItems([...items, { id: part.id, name: part.name, quantity: 1, priceMdl: part.priceMdl, stock: part.stock }]); setFound([]); setSearch(""); }} type="button"><Plus size={16} /></button>

@@ -18,36 +18,36 @@ export async function POST(request: Request) {
 
   try {
     if (body.action === "register") {
-      const { customer, token: fresh } = registerCustomer(body);
+      const { customer, token: fresh } = (await registerCustomer(body));
       jar.set(customerCookie, fresh, customerCookieOptions);
       return json({ ok: true, customer });
     }
     if (body.action === "login") {
-      const result = loginCustomer(String(body.login ?? ""), String(body.password ?? ""));
+      const result = (await loginCustomer(String(body.login ?? ""), String(body.password ?? "")));
       // Один и тот же ответ на неизвестную почту и на неверный пароль: так не узнать, кто у нас есть.
       if (!result) return json({ field: "password", message: "Неверная почта, телефон или пароль." }, 401);
       jar.set(customerCookie, result.token, customerCookieOptions);
       return json({ ok: true, customer: result.customer });
     }
     if (body.action === "logout") {
-      logoutCustomer(token, body.everywhere === true);
+      (await logoutCustomer(token, body.everywhere === true));
       jar.delete(customerCookie);
       return json({ ok: true });
     }
 
-    const customer = customerBySession(token);
+    const customer = (await customerBySession(token));
     if (!customer) return json({ message: "Войдите в кабинет." }, 401);
 
     switch (body.action) {
-      case "profile": updateProfile(customer, body); return json({ ok: true });
+      case "profile": (await updateProfile(customer, body)); return json({ ok: true });
       case "password": {
-        changePassword(customer, body.current, body.password);
+        (await changePassword(customer, body.current, body.password));
         jar.delete(customerCookie);
         return json({ ok: true, loggedOut: true });
       }
-      case "save-address": return json({ ok: true, id: saveAddress(customer, body), addresses: listAddresses(customer.id) });
-      case "default-address": setDefaultAddress(customer, Number(body.id)); return json({ ok: true, addresses: listAddresses(customer.id) });
-      case "delete-address": deleteAddress(customer, Number(body.id)); return json({ ok: true, addresses: listAddresses(customer.id) });
+      case "save-address": return json({ ok: true, id: (await saveAddress(customer, body)), addresses: (await listAddresses(customer.id)) });
+      case "default-address": (await setDefaultAddress(customer, Number(body.id))); return json({ ok: true, addresses: (await listAddresses(customer.id)) });
+      case "delete-address": (await deleteAddress(customer, Number(body.id))); return json({ ok: true, addresses: (await listAddresses(customer.id)) });
       default: return new Response(null, { status: 400 });
     }
   } catch (error) {

@@ -11,6 +11,6 @@ export async function POST(request: Request) {
   const vehicle = typeof body?.vehicle === "string" ? body.vehicle.trim() : "";
   const source = body?.source;
   if (!isValidPhoneNumber(phone) || !part || part.length > 200 || vehicle.length > 200 || !["expert", "catalog"].includes(source)) return Response.json({ message: "Проверьте телефон и название детали." }, { status: 400 });
-  try { return Response.json({ id: createInquiry(phone, part, vehicle, source) }, { status: 201, headers: { "Cache-Control": "no-store" } }); }
+  try { return Response.json({ id: (await createInquiry(phone, part, vehicle, source)) }, { status: 201, headers: { "Cache-Control": "no-store" } }); }
   catch (error) { return Response.json({ message: error instanceof Error ? error.message : "Не удалось отправить заявку." }, { status: 429 }); }
 }

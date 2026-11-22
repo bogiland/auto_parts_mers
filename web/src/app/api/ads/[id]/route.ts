@@ -1,0 +1,3 @@
+import {one,run} from '@/lib/db';
+export const runtime='nodejs';
+export async function GET(_request:Request,{params}:{params:Promise<{id:string}>}){const {id}=await params,n=Number(id);if(!Number.isSafeInteger(n)||n<1)return new Response(null,{status:404});const banner=await one<{url:string}>('SELECT url FROM ad_banners WHERE id=$1 AND enabled AND start_at<=now() AND end_at>now()',[n]);if(!banner)return new Response(null,{status:404});let url:URL;try{url=new URL(banner.url);}catch{return new Response(null,{status:404});}if(!['https:','http:'].includes(url.protocol)||url.username||url.password)return new Response(null,{status:404});await run("INSERT INTO ad_events(banner_id,kind) VALUES($1,'click')",[n]);return Response.redirect(url,302);}

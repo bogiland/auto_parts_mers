@@ -9,6 +9,6 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Оформление заказа — NAA.md", robots: { index: false, follow: false } };
 export default async function Page() {
-  const homepage = await getLiveHomepage();
+  const homepage = await getLiveHomepage({ includeInventory: false });
   return <><SiteHeader hours={homepage.hours} phone={homepage.phone} /><CheckoutPage /><SiteFooter /></>;
 }

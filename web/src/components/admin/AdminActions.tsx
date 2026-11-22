@@ -5,7 +5,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 export function LogoutButtons() {
   const router = useRouter(); const [busy, setBusy] = useState(false);
   async function leave(all: boolean) { setBusy(true); try { const response = await fetch(`/api/staff/logout${all ? "?all=1" : ""}`, { method: "POST" }); if (!response.ok) throw new Error(); localStorage.setItem("naa:staff-logout", String(Date.now())); router.replace("/admin/login"); router.refresh(); } finally { setBusy(false); } }
-  return <div className="flex gap-3"><button disabled={busy} onClick={() => leave(false)}>Выйти</button><button disabled={busy} onClick={() => leave(true)}>Выйти на всех устройствах</button></div>;
+  return <div className="flex gap-3"><button disabled={busy} onClick={async () => (await leave(false))}>Выйти</button><button disabled={busy} onClick={async () => (await leave(true))}>Выйти на всех устройствах</button></div>;
 }
 
 export function AdminAction({ action, fields, children, onDone, submitLabel = "Сохранить" }: { action: string; fields: Record<string, string | number>; children: ReactNode; onDone?: () => void; submitLabel?: string }) {

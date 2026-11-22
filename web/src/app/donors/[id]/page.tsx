@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: Props) {
   const { id } = await params;
-  const donor = publicDonor(id);
+  const donor = (await publicDonor(id));
   if (!donor) return { title: "Машина не найдена — NAA.md", robots: { index: false, follow: false } };
   const title = donorTitle(donor);
   return { title: `Запчасти с ${title} — NAA.md`, description: `Детали, снятые с ${title}${donor.engine ? `, двигатель ${donor.engine}` : ""}. Наличие и состояние уточняет оператор.` };
@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function DonorPage({ params }: Props) {
   const { id } = await params;
-  const donor = publicDonor(id);
+  const donor = (await publicDonor(id));
   if (!donor) notFound();
   const homepage = await getLiveHomepage();
   const title = donorTitle(donor);
@@ -66,7 +66,7 @@ export default async function DonorPage({ params }: Props) {
       <section className="min-w-0">
         <h2 className="text-section font-bold text-ink">Детали с этой машины</h2>
         {available.length
-          ? <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-3 desktop:grid-cols-4">{available.map((part) => <ProductCard key={part.id} product={toStoreProduct(part)} />)}</div>
+          ? <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-3 desktop:grid-cols-4">{(await Promise.all(available.map(async (part) => <ProductCard key={part.id} product={(await toStoreProduct(part))} />)))}</div>
           : <p className="mt-2 text-body text-ink-2">Сейчас с этой машины ничего не выложено. Напишите, что нужно — посмотрим на месте.</p>}
         {sold.length > 0 && <p className="mt-4 text-meta text-ink-2">Ещё {sold.length} дет. с этой машины уже проданы — их страницы остаются открытыми.</p>}
       </section>

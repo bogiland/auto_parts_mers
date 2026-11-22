@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { notFound, permanentRedirect } from "next/navigation";
+import { notFound, permanentRedirect, redirect } from "next/navigation";
 
 import { CatalogResultsPage } from "@/components/catalog/CatalogResultsPage";
 import { VehicleJourney } from "@/components/catalog/vehicle-journey";
-import { ProductRail } from "@/components/product/ProductRail";
 import { SiteHeader } from "@/components/header/SiteHeader";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SectionHeader } from "@/components/ui/section-header";
@@ -29,7 +28,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: CatalogCategoryPageProps) {
   const { categoryPath, direction } = await params;
-  const own = findPublicCategory(categoryPath.at(-1) ?? "");
+  const own = (await findPublicCategory(categoryPath.at(-1) ?? ""));
   if (own && own.status !== "redirect") {
     if (own.status === "hidden") return { robots: { index: false, follow: false }, title: "Раздел временно недоступен — NAA.md" };
     return { description: own.seoDescription || `Автозапчасти категории «${own.name}»: цены, наличие и подбор экспертом.`, title: own.seoTitle || `${own.name} — купить автозапчасти | NAA.md` };
@@ -48,7 +47,7 @@ export default async function CatalogCategoryPage({ params, searchParams }: Cata
   const homepage = await getLiveHomepage();
   const [first] = categoryPath;
   const vehicleBrand = directionSlug === "legkovye" ? getBrands().find((item) => item.slug === first) : null;
-  const own = findPublicCategory(categoryPath.at(-1) ?? "");
+  const own = (await findPublicCategory(categoryPath.at(-1) ?? ""));
   if (own?.status === "redirect") permanentRedirect(`/catalog/${directionSlug}/${own.slug}`);
 
   let content: React.ReactNode;
@@ -57,7 +56,7 @@ export default async function CatalogCategoryPage({ params, searchParams }: Cata
   } else if (directionSlug === "legkovye" && first === "categories") {
     content = <main className="container-site section-stack bg-surface-2 pb-12 pt-4"><section className="rounded-ui bg-white p-4 desktop:p-6"><SectionHeader title="Все категории" /><div className="grid grid-cols-2 gap-2 md:grid-cols-4 desktop:grid-cols-6">{homepage.categories.map((category) => <Link className="rounded-ui bg-surface-2 p-3 text-body font-bold text-ink hover:text-accent" href={`/catalog/legkovye/${category.slug}`} key={category.id}>{category.name}</Link>)}</div></section></main>;
   } else if (directionSlug === "legkovye" && first === "all") {
-    content = <main className="container-site section-stack bg-surface-2 pb-12 pt-4"><section className="rounded-ui bg-white p-4 desktop:p-6"><SectionHeader title="Все запчасти" /><ProductRail products={[...homepage.popularProducts, ...homepage.recommendedProducts]} /></section></main>;
+    content = <CatalogResultsPage categoryName="Все запчасти" pathOverride="/catalog/legkovye/all" homepage={homepage} searchParams={query} />;
   } else if (vehicleBrand) {
     content = await VehicleJourney({ homepage, path: categoryPath });
     if (!content) notFound();
@@ -66,9 +65,19 @@ export default async function CatalogCategoryPage({ params, searchParams }: Cata
   } else if (own && own.status === "ok") {
     content = <CatalogResultsPage categoryName={own.name} categorySlug={own.slug} homepage={homepage} intro={own.intro} ownCategoryId={own.id} searchParams={query} />;
   } else {
+    // The homepage also links to the built-in categories when the live
+    // directory contains a different set of slugs.
+    const builtInCategories = (await getHomepage()).categories;
     const categorySlug = categorySlugFromPath(sourceCategorySlug(categoryPath.at(-1) ?? ""));
-    const category = homepage.categories.find((item) => item.slug === categorySlug);
-    if (!category) notFound();
+    const category = builtInCategories.find((item) => item.slug === categorySlug);
+    if (!category) {
+      // Подраздела ещё нет в каталоге: вместо ошибки уводим в ближайший раздел выше по пути.
+      for (let depth = categoryPath.length - 1; depth > 0; depth -= 1) {
+        const parent = categorySlugFromPath(sourceCategorySlug(categoryPath[depth - 1]));
+        if (builtInCategories.some((item) => item.slug === parent)) redirect(`/catalog/${directionSlug}/${categoryPath[depth - 1]}`);
+      }
+      notFound();
+    }
     content = <CatalogResultsPage categoryName={category.name} categorySlug={category.slug} homepage={homepage} searchParams={query} />;
   }
 

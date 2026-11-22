@@ -1,0 +1,5 @@
+import { currentStaff } from '@/lib/staff-auth';
+import { orderDetail } from '@/lib/orders-db';
+import { audit } from '@/lib/staff-db';
+export const runtime='nodejs';
+export async function GET(request:Request){const actor=await currentStaff();if(!actor)return Response.redirect(new URL('/admin/login',request.url));const order=await orderDetail(Number(new URL(request.url).searchParams.get('order')));if(!order||['issued','cancelled','returned'].includes(order.status))return new Response('Контакты закрытого заказа скрыты.',{status:404});await audit(actor,'Звонок из Telegram',`№ ${order.number}`);const phone=order.phone.replace(/[^+\d]/g,'');return new Response(`<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Позвонить клиенту</title><body><h1>Заказ № ${order.number}</h1><a href="tel:${phone}">Позвонить ${phone}</a></body></html>`,{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','Referrer-Policy':'no-referrer'}});}

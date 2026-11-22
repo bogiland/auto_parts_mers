@@ -13,14 +13,15 @@ const statusLabels: Record<string, string> = {
 
 export default async function AccountPage() {
   const customer = await requireCustomer();
-  const orders = customerOrders(customer);
-  const addresses = listAddresses(customer.id);
+  const orders = (await customerOrders(customer));
+  const addresses = (await listAddresses(customer.id));
   const open = orders.filter((order) => !["issued", "cancelled", "returned"].includes(order.status));
 
   return <AccountShell active="/account" title="Мой кабинет">
     <section className="rounded-ui bg-white p-4 shadow-card md:p-6">
       <h2 className="text-block font-bold text-ink">Здравствуйте, {customer.name}</h2>
       <dl className="mt-4 flex flex-col gap-3 text-body">
+        <div className="flex gap-2"><dt className="text-ink-2">Номер клиента:</dt><dd className="text-ink">№ {customer.id}</dd></div>
         <div className="flex gap-2"><dt className="text-ink-2">Имя:</dt><dd className="min-w-0 text-ink">{[customer.name, customer.surname].filter(Boolean).join(" ")}</dd></div>
         <div className="flex gap-2"><dt className="text-ink-2">Почта:</dt><dd className="min-w-0 text-ink">{customer.email}</dd></div>
         <div className="flex gap-2"><dt className="text-ink-2">Телефон:</dt><dd className="min-w-0 text-ink">{customer.phone}</dd></div>

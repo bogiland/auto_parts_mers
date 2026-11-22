@@ -35,7 +35,7 @@ export function Brands({ brands }: { brands: PartBrand[] }) {
         <div className="admin-tree-name"><strong>{brand.name}</strong>{brand.description && <small className="admin-muted">{brand.description}</small>}</div>
         <div className="admin-tree-actions">
           <button aria-label="Изменить" className="admin-icon-button" onClick={() => { setDraft({ ...brand }); setError(""); }} type="button"><Pencil size={16} /></button>
-          <button aria-label="Удалить" className="admin-icon-button" disabled={busy} onClick={() => { if (window.confirm(`Удалить бренд «${brand.name}»?`)) void run({ action: "delete-brand", id: brand.id }, "Бренд удалён"); }} type="button"><Trash size={16} /></button>
+          <button aria-label="Удалить" className="admin-icon-button" disabled={busy} onClick={async () => { if (window.confirm(`Удалить бренд «${brand.name}»?`)) void (await run({ action: "delete-brand", id: brand.id }, "Бренд удалён")); }} type="button"><Trash size={16} /></button>
         </div>
       </div>)}
       {!brands.length && <p className="admin-muted">Брендов пока нет.</p>}

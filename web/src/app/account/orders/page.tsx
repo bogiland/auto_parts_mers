@@ -15,8 +15,8 @@ const money = (value: number) => `${value.toLocaleString("ru-RU")} L.`;
 
 export default async function AccountOrdersPage() {
   const customer = await requireCustomer();
-  const orders = customerOrders(customer);
-  const timezone = getSettings().timezone;
+  const orders = (await customerOrders(customer));
+  const timezone = (await getSettings()).timezone;
   const when = (value: string) => new Intl.DateTimeFormat("ru-RU", { dateStyle: "long", timeStyle: "short", timeZone: timezone }).format(new Date(value));
 
   return <AccountShell active="/account/orders" title="История заказов">

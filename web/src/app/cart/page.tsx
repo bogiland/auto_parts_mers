@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
-  const homepage = await getLiveHomepage();
+  const homepage = await getLiveHomepage({ includeInventory: false });
   const products = [...homepage.popularProducts, ...homepage.recommendedProducts];
   return <><SiteHeader hours={homepage.hours} phone={homepage.phone} /><CartPage products={products} /><SiteFooter /></>;
 }

@@ -10,7 +10,7 @@ export function AdminSessionGuard() {
       const response = await fetch("/api/staff/me", { cache: "no-store" }).catch(() => null);
       if (response?.status === 401) { router.replace("/admin/login"); router.refresh(); }
     }
-    const onStorage = (event: StorageEvent) => { if (event.key === "naa:staff-logout") void check(); };
+    const onStorage = async (event: StorageEvent) => { if (event.key === "naa:staff-logout") void check(); };
     window.addEventListener("focus", check);
     window.addEventListener("storage", onStorage);
     return () => { window.removeEventListener("focus", check); window.removeEventListener("storage", onStorage); };

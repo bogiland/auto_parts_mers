@@ -1,48 +1,12 @@
+import { legacyQuery, transaction } from "@/lib/db";
 import "server-only";
 
 import { randomBytes } from "node:crypto";
-import { createRequire } from "node:module";
-import { mkdirSync } from "node:fs";
-import path from "node:path";
-import { getCheckoutCatalog } from "@/lib/checkout-db";
 import { audit, type Staff } from "@/lib/staff-db";
 import { listPartTypes, partName, partNameRo, saveImage, slugify, type PartType } from "@/lib/reference-db";
 import { parsePhotos, type Photo } from "@/lib/photos";
 
 type Row = Record<string, string | number | null>;
-type Statement = { get(...args: (string | number | null)[]): Row | undefined; all(...args: (string | number | null)[]): Row[]; run(...args: (string | number | null)[]): { changes: number } };
-type Database = { exec(sql: string): void; prepare(sql: string): Statement };
-
-const require = createRequire(import.meta.url);
-let connection: Database | undefined;
-
-function db(): Database {
-  if (connection) return connection;
-  getCheckoutCatalog();
-  mkdirSync(path.join(process.cwd(), "data"), { recursive: true });
-  const { DatabaseSync } = require("node:sqlite") as { DatabaseSync: new (file: string) => Database };
-  const database = new DatabaseSync(path.join(process.cwd(), "data", "orders.sqlite"));
-  database.exec(`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;
-    CREATE TABLE IF NOT EXISTS donors (id TEXT PRIMARY KEY, make_id TEXT, model_id TEXT, generation_id TEXT,
-      make TEXT NOT NULL, model TEXT NOT NULL DEFAULT '', generation TEXT NOT NULL DEFAULT '', year INTEGER,
-      engine TEXT NOT NULL DEFAULT '', mileage INTEGER, note TEXT NOT NULL DEFAULT '',
-      photos_json TEXT NOT NULL DEFAULT '[]', visible INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL);
-    CREATE INDEX IF NOT EXISTS donors_created ON donors(created_at DESC);
-    CREATE TABLE IF NOT EXISTS counters (name TEXT PRIMARY KEY, value INTEGER NOT NULL);
-    CREATE TABLE IF NOT EXISTS part_offers (id TEXT PRIMARY KEY, product_id TEXT NOT NULL, supplier TEXT NOT NULL DEFAULT 'own',
-      supplier_name TEXT NOT NULL DEFAULT 'Свой склад', price_mdl INTEGER, stock INTEGER NOT NULL DEFAULT 0,
-      lead_days INTEGER, created_at TEXT NOT NULL, UNIQUE(product_id, supplier));
-    CREATE INDEX IF NOT EXISTS part_offers_product ON part_offers(product_id);`);
-  // Поля детали: артикул и адрес страницы ставятся один раз и больше не меняются.
-  for (const column of ["sku TEXT", "donor_id TEXT", "condition TEXT", "location TEXT", "side TEXT", "position TEXT",
-    "name_ro TEXT", "slug TEXT", "includes TEXT", "applicability TEXT", "created_at TEXT", "sold_at TEXT",
-    "hidden INTEGER NOT NULL DEFAULT 0"]) {
-    const name = column.split(" ")[0];
-    if (!database.prepare("PRAGMA table_info(catalog_products)").all().some((info) => info.name === name)) database.exec(`ALTER TABLE catalog_products ADD COLUMN ${column}`);
-  }
-  connection = database;
-  return database;
-}
 
 const now = () => new Date().toISOString();
 const newId = (prefix: string) => `${prefix}-${randomBytes(6).toString("hex")}`;
@@ -95,21 +59,22 @@ function toDonor(row: Row): Donor {
 
 const donorSelect = `SELECT d.*, (SELECT COUNT(*) FROM catalog_products p WHERE p.donor_id=d.id) AS parts FROM donors d`;
 
-export function listDonors(): Donor[] {
-  return db().prepare(`${donorSelect} ORDER BY d.created_at DESC LIMIT 300`).all().map(toDonor);
+export async function listDonors(): Promise<Donor[]> {
+  return (await legacyQuery.all<Row>(`${donorSelect} ORDER BY d.created_at DESC LIMIT 300`, [])).map(toDonor);
 }
 
 /** Последние пять доноров: с них чаще всего снимают следующую деталь. */
-export function recentDonors(limit = 5): Donor[] {
-  return db().prepare(`${donorSelect} ORDER BY d.created_at DESC LIMIT ?`).all(limit).map(toDonor);
+export async function recentDonors(limit = 5): Promise<Donor[]> {
+  return (await legacyQuery.all<Row>(`${donorSelect} ORDER BY d.created_at DESC LIMIT ?`, [limit])).map(toDonor);
 }
 
-export function donorById(id: string): Donor | null {
-  const row = db().prepare(`${donorSelect} WHERE d.id=?`).get(id);
+export async function donorById(id: string): Promise<Donor | null> {
+  const row = (await legacyQuery.get<Row>(`${donorSelect} WHERE d.id=?`, [id]));
   return row ? toDonor(row) : null;
 }
 
-export function saveDonor(actor: Staff, input: Record<string, unknown>) {
+export async function saveDonor(actor: Staff, input: Record<string, unknown>) {
+return (await transaction(async () => {
   const id = typeof input.id === "string" && input.id ? input.id : null;
   const make = text(input.make, 60, "Марка", true);
   const model = text(input.model, 60, "Модель");
@@ -123,15 +88,17 @@ export function saveDonor(actor: Staff, input: Record<string, unknown>) {
   const photos = JSON.stringify(normalizePhotos(input.photos, 8));
   const fields = [reference(input.makeId), reference(input.modelId), reference(input.generationId), make, model, generation, year, engine, mileage, note, photos, visible] as (string | number | null)[];
   if (id) {
-    const result = db().prepare("UPDATE donors SET make_id=?,model_id=?,generation_id=?,make=?,model=?,generation=?,year=?,engine=?,mileage=?,note=?,photos_json=?,visible=? WHERE id=?").run(...fields, id);
+    const result = (await legacyQuery.run<Row>("UPDATE donors SET make_id=?,model_id=?,generation_id=?,make=?,model=?,generation=?,year=?,engine=?,mileage=?,note=?,photos_json=?,visible=? WHERE id=?", [...fields, id]));
     if (!result.changes) throw new Error("Донор не найден.");
-    audit(actor, "Правка донора", `${id}: ${make} ${model}`);
+    (await audit(actor, "Правка донора", `${id}: ${make} ${model}`));
     return id;
   }
   const created = newId("donor");
-  db().prepare("INSERT INTO donors(id,make_id,model_id,generation_id,make,model,generation,year,engine,mileage,note,photos_json,visible,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)").run(created, ...fields, now());
-  audit(actor, "Новый донор", `${created}: ${make} ${model} ${year ?? ""}`.trim());
+  (await legacyQuery.run<Row>("INSERT INTO donors(id,make_id,model_id,generation_id,make,model,generation,year,engine,mileage,note,photos_json,visible,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)", [created, ...fields, now()]));
+  (await audit(actor, "Новый донор", `${created}: ${make} ${model} ${year ?? ""}`.trim()));
   return created;
+
+}));
 }
 
 /* ---------- Фото ---------- */
@@ -151,18 +118,21 @@ function normalizePhotos(value: unknown, limit: number): Photo[] {
   });
 }
 
-export function setPartPhotos(actor: Staff, id: string, value: unknown) {
-  const photos = normalizePhotos(value, 6);
-  const result = db().prepare("UPDATE catalog_products SET photos_json=? WHERE id=?").run(JSON.stringify(photos), id);
+export async function setPartPhotos(actor: Staff, id: string, value: unknown) {
+return (await transaction(async () => {
+  const photos = normalizePhotos(value, 10);
+  const result = (await legacyQuery.run<Row>("UPDATE catalog_products SET photos_json=? WHERE id=?", [JSON.stringify(photos), id]));
   if (!result.changes) throw new Error("Деталь не найдена.");
-  audit(actor, "Фото детали", `${id}: ${photos.length} фото`);
+  (await audit(actor, "Фото детали", `${id}: ${photos.length} фото`));
   return photos;
+
+}));
 }
 
 /* ---------- Детали ---------- */
 
 export type PartRow = {
-  id: string; sku: string; nameRu: string; nameRo: string; slug: string;
+  id: string; sku: string; oem: string; nameRu: string; nameRo: string; slug: string;
   priceMdl: number | null; priceMode: string; stock: number; condition: string; location: string;
   donorId: string | null; donorTitle: string; categoryId: string | null; partTypeId: string | null;
   side: string; position: string; includes: string; applicability: string;
@@ -171,7 +141,7 @@ export type PartRow = {
 
 function toPart(row: Row): PartRow {
   return {
-    id: String(row.id), sku: String(row.sku ?? ""), nameRu: String(row.name), nameRo: String(row.name_ro ?? ""),
+    id: String(row.id), sku: String(row.sku ?? ""), oem: String(row.oem_number ?? ""), nameRu: String(row.name), nameRo: String(row.name_ro ?? ""),
     slug: String(row.slug ?? ""), priceMdl: row.price_mdl === null ? null : Number(row.price_mdl),
     priceMode: String(row.price_mode), stock: Number(row.stock), condition: String(row.condition ?? ""),
     location: String(row.location ?? ""), donorId: (row.donor_id as string | null) ?? null,
@@ -184,17 +154,17 @@ function toPart(row: Row): PartRow {
 }
 
 const partSelect = `SELECT p.*, (SELECT CASE WHEN d.id IS NULL THEN '' ELSE
-    trim(d.make || ' ' || d.model || ' ' || d.generation || ' ' || COALESCE(d.year,'')) END
+    trim(d.make || ' ' || d.model || ' ' || d.generation || ' ' || COALESCE(d.year::text,'')) END
   FROM donors d WHERE d.id=p.donor_id) AS donor_title FROM catalog_products p`;
 
 export type PartFilter = "all" | "no_photo" | "no_price" | "no_ro" | "no_stock" | "stale";
 
-export function listParts(filter: PartFilter = "all", query = ""): PartRow[] {
-  const rows = db().prepare(`${partSelect} ORDER BY COALESCE(p.created_at,'') DESC, p.name LIMIT 500`).all().map(toPart);
+export async function listParts(filter: PartFilter = "all", query = ""): Promise<PartRow[]> {
+  const rows = (await legacyQuery.all<Row>(`${partSelect} ORDER BY COALESCE(p.created_at,'') DESC, p.name LIMIT 500`, [])).map(toPart);
   const stale = Date.now() - 90 * 24 * 60 * 60 * 1000;
   const text = query.trim().toLowerCase();
   return rows.filter((part) => {
-    if (text && !`${part.sku} ${part.nameRu} ${part.nameRo} ${part.donorTitle} ${part.location}`.toLowerCase().includes(text)) return false;
+    if (text && !`${part.sku} ${part.oem} ${part.nameRu} ${part.nameRo} ${part.donorTitle} ${part.location}`.toLowerCase().includes(text)) return false;
     if (filter === "no_photo") return !part.photos.length;
     if (filter === "no_price") return part.priceMode !== "fixed" || part.priceMdl === null;
     if (filter === "no_ro") return !part.nameRo;
@@ -204,29 +174,38 @@ export function listParts(filter: PartFilter = "all", query = ""): PartRow[] {
   });
 }
 
-export function partById(id: string): PartRow | null {
-  const row = db().prepare(`${partSelect} WHERE p.id=?`).get(id);
+export async function partById(id: string): Promise<PartRow | null> {
+  const row = (await legacyQuery.get<Row>(`${partSelect} WHERE p.id=?`, [id]));
   return row ? toPart(row) : null;
 }
 
-export function partsOfDonor(donorId: string): PartRow[] {
-  return db().prepare(`${partSelect} WHERE p.donor_id=? ORDER BY p.name`).all(donorId).map(toPart);
+/** Public product links use the readable slug; old internal-ID links keep working too. */
+export async function partByPublicId(value: string): Promise<PartRow | null> {
+  const row = (await legacyQuery.get<Row>(`${partSelect} WHERE p.id=? OR p.slug=? LIMIT 1`, [value, value]));
+  return row ? toPart(row) : null;
+}
+
+export async function partsOfDonor(donorId: string): Promise<PartRow[]> {
+  return (await legacyQuery.all<Row>(`${partSelect} WHERE p.donor_id=? ORDER BY p.name`, [donorId])).map(toPart);
 }
 
 /** Артикул не меняется никогда: он выдаётся один раз из общего счётчика. */
-function nextSku(): string {
-  const database = db();
-  database.prepare("INSERT OR IGNORE INTO counters(name,value) VALUES('sku',0)").run();
-  database.prepare("UPDATE counters SET value=value+1 WHERE name='sku'").run();
-  const value = Number(database.prepare("SELECT value FROM counters WHERE name='sku'").get()?.value ?? 1);
+async function nextSku(): Promise<string> {
+return (await transaction(async () => {
+  
+  (await legacyQuery.run<Row>("INSERT OR IGNORE INTO counters(name,value) VALUES('sku',0)", []));
+  (await legacyQuery.run<Row>("UPDATE counters SET value=value+1 WHERE name='sku'", []));
+  const value = Number((await legacyQuery.get<Row>("SELECT value FROM counters WHERE name='sku'", []))?.value ?? 1);
   return `NAA-${String(value).padStart(6, "0")}`;
+
+}));
 }
 
-function uniqueSlug(base: string): string {
+async function uniqueSlug(base: string): Promise<string> {
   const root = base || "detal";
   for (let attempt = 0; attempt < 50; attempt += 1) {
     const candidate = attempt ? `${root}-${attempt + 1}` : root;
-    if (!db().prepare("SELECT id FROM catalog_products WHERE slug=?").get(candidate)) return candidate;
+    if (!(await legacyQuery.get<Row>("SELECT id FROM catalog_products WHERE slug=?", [candidate]))) return candidate;
   }
   return `${root}-${randomBytes(3).toString("hex")}`;
 }
@@ -240,24 +219,25 @@ export function composeNames(type: PartType, side: string, position: string, don
 }
 
 /** Тот же донор, тот же тип и та же сторона — скорее всего деталь уже заведена. */
-export function findDuplicate(donorId: string, partTypeId: string, side: string): PartRow | null {
+export async function findDuplicate(donorId: string, partTypeId: string, side: string): Promise<PartRow | null> {
   if (!donorId || !partTypeId) return null;
-  const row = db().prepare(`${partSelect} WHERE p.donor_id=? AND p.part_type_id=? AND COALESCE(p.side,'')=? LIMIT 1`).get(donorId, partTypeId, side ?? "");
+  const row = (await legacyQuery.get<Row>(`${partSelect} WHERE p.donor_id=? AND p.part_type_id=? AND COALESCE(p.side,'')=? LIMIT 1`, [donorId, partTypeId, side ?? ""]));
   return row ? toPart(row) : null;
 }
 
 export type NewPartResult = { id: string; sku: string; name: string; slug: string; donorId: string | null };
 
-export function addPart(actor: Staff, input: Record<string, unknown>): NewPartResult {
+export async function addPart(actor: Staff, input: Record<string, unknown>): Promise<NewPartResult> {
+return (await transaction(async () => {
   const typeId = text(input.partTypeId, 60, "Тип детали");
-  const type = typeId ? listPartTypes().find((item) => item.id === typeId) ?? null : null;
+  const type = typeId ? (await listPartTypes()).find((item) => item.id === typeId) ?? null : null;
   if (typeId && !type) throw new Error("Тип детали не найден в справочнике.");
   const side = type?.hasSide ? text(input.side, 10, "Сторона") : "";
   const position = type?.hasPosition ? text(input.position, 10, "Положение") : "";
   if (type?.hasSide && !["left", "right"].includes(side)) throw new Error("Укажите сторону: левая или правая.");
   if (type?.hasPosition && !["front", "rear"].includes(position)) throw new Error("Укажите положение: перед или зад.");
   const donorId = typeof input.donorId === "string" && input.donorId ? input.donorId : null;
-  const donor = donorId ? donorById(donorId) : null;
+  const donor = donorId ? (await donorById(donorId)) : null;
   if (donorId && !donor) throw new Error("Донор не найден.");
   const condition = text(input.condition, 20, "Состояние", true);
   if (!conditions.some((item) => item.id === condition)) throw new Error("Выберите состояние детали.");
@@ -277,36 +257,36 @@ export function addPart(actor: Staff, input: Record<string, unknown>): NewPartRe
   const categoryId = (typeof input.categoryId === "string" && input.categoryId) || type?.categoryId || null;
   const returnRestricted = type?.returnRestricted || input.returnRestricted === true || input.returnRestricted === "on" ? 1 : 0;
   const productType = type?.nameRu || text(input.productType, 80, "Вид детали");
-  const photos = JSON.stringify(normalizePhotos(input.photos, 6));
+  const photos = JSON.stringify(normalizePhotos(input.photos, 10));
 
   const id = `part-${randomBytes(8).toString("hex")}`;
-  const sku = nextSku();
-  const slug = uniqueSlug(slugify(nameRu));
-  const database = db();
-  database.exec("BEGIN IMMEDIATE");
+  const sku = (await nextSku());
+  const slug = (await uniqueSlug(slugify(nameRu)));
+  
+  
   try {
-    database.prepare(`INSERT INTO catalog_products
+    (await legacyQuery.run<Row>(`INSERT INTO catalog_products
       (id,name,name_ro,slug,sku,price_mdl,stock,price_mode,return_restricted,product_type,category_id,part_type_id,model_id,
        donor_id,condition,location,side,position,includes,applicability,photos_json,hidden,created_at)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?)`)
-      .run(id, nameRu, nameRo, slug, sku, price, stock, onRequest ? "on_request" : "fixed", returnRestricted, productType || null,
-        categoryId, typeId || null, donor?.modelId ?? null, donorId, condition, location, side, position, includes, applicability, photos, now());
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?)`, [id, nameRu, nameRo, slug, sku, price, stock, onRequest ? "on_request" : "fixed", returnRestricted, productType || null, categoryId, typeId || null, donor?.modelId ?? null, donorId, condition, location, side, position, includes, applicability, photos, now()]));
     // Сегодня предложение одно — свой склад. Таблица предложений позволит позже добавить поставщиков,
     // не трогая деталь: у каждого будет своя цена, остаток и срок.
-    database.prepare("INSERT INTO part_offers(id,product_id,supplier,supplier_name,price_mdl,stock,lead_days,created_at) VALUES(?,?,'own','Свой склад',?,?,0,?)")
-      .run(newId("offer"), id, price, stock, now());
-    database.exec("COMMIT");
+    (await legacyQuery.run<Row>("INSERT INTO part_offers(id,product_id,supplier,supplier_name,price_mdl,stock,lead_days,created_at) VALUES(?,?,'own','Свой склад',?,?,0,?)", [newId("offer"), id, price, stock, now()]));
+    
   } catch (error) {
-    database.exec("ROLLBACK");
+    
     throw error;
   }
-  audit(actor, "Добавление детали", `${sku} ${id}: ${nameRu}`);
+  (await audit(actor, "Добавление детали", `${sku} ${id}: ${nameRu}`));
   return { id, sku, name: nameRu, slug, donorId };
+
+}));
 }
 
-export function updatePart(actor: Staff, input: Record<string, unknown>) {
+export async function updatePart(actor: Staff, input: Record<string, unknown>) {
+return (await transaction(async () => {
   const id = text(input.id, 60, "Деталь", true);
-  const before = partById(id);
+  const before = (await partById(id));
   if (!before) throw new Error("Деталь не найдена.");
   const condition = text(input.condition, 20, "Состояние") || before.condition;
   const onRequest = input.priceOnRequest === true || input.priceOnRequest === "on";
@@ -316,64 +296,70 @@ export function updatePart(actor: Staff, input: Record<string, unknown>) {
   const nameRo = text(input.nameRo, 160, "Название RO");
   const location = text(input.location, 60, "Место на складе");
   // Адрес страницы и артикул остаются прежними даже после переименования.
-  db().prepare("UPDATE catalog_products SET name=?,name_ro=?,price_mdl=?,price_mode=?,stock=?,condition=?,location=?,includes=?,applicability=? WHERE id=?")
-    .run(nameRu, nameRo, price, onRequest ? "on_request" : "fixed", stock, condition, location,
-      text(input.includes, 300, "Что входит"), text(input.applicability, 300, "Применимость"), id);
-  db().prepare("UPDATE part_offers SET price_mdl=?,stock=? WHERE product_id=? AND supplier='own'").run(price, stock, id);
-  audit(actor, "Правка детали", `${before.sku || id}: ${nameRu}`);
+  (await legacyQuery.run<Row>("UPDATE catalog_products SET name=?,name_ro=?,price_mdl=?,price_mode=?,stock=?,condition=?,location=?,includes=?,applicability=? WHERE id=?", [nameRu, nameRo, price, onRequest ? "on_request" : "fixed", stock, condition, location, text(input.includes, 300, "Что входит"), text(input.applicability, 300, "Применимость"), id]));
+  (await legacyQuery.run<Row>("UPDATE part_offers SET price_mdl=?,stock=? WHERE product_id=? AND supplier='own'", [price, stock, id]));
+  (await audit(actor, "Правка детали", `${before.sku || id}: ${nameRu}`));
+
+}));
 }
 
-export function setPartHidden(actor: Staff, id: string, hidden: boolean) {
-  const result = db().prepare("UPDATE catalog_products SET hidden=? WHERE id=?").run(hidden ? 1 : 0, id);
+export async function setPartHidden(actor: Staff, id: string, hidden: boolean) {
+return (await transaction(async () => {
+  const result = (await legacyQuery.run<Row>("UPDATE catalog_products SET hidden=? WHERE id=?", [hidden ? 1 : 0, id]));
   if (!result.changes) throw new Error("Деталь не найдена.");
-  audit(actor, hidden ? "Деталь скрыта с сайта" : "Деталь снова на сайте", id);
+  (await audit(actor, hidden ? "Деталь скрыта с сайта" : "Деталь снова на сайте", id));
+
+}));
 }
 
-export function setPartPrice(actor: Staff, id: string, price: number) {
+export async function setPartPrice(actor: Staff, id: string, price: number) {
+return (await transaction(async () => {
   if (!Number.isSafeInteger(price) || price < 0) throw new Error("Неверная цена.");
-  const before = db().prepare("SELECT price_mdl FROM catalog_products WHERE id=?").get(id);
+  const before = (await legacyQuery.get<Row>("SELECT price_mdl FROM catalog_products WHERE id=?", [id]));
   if (!before) throw new Error("Деталь не найдена.");
-  db().prepare("UPDATE catalog_products SET price_mdl=?,price_mode='fixed' WHERE id=?").run(price, id);
-  db().prepare("UPDATE part_offers SET price_mdl=? WHERE product_id=? AND supplier='own'").run(price, id);
-  audit(actor, "Правка цены", `${id}: ${before.price_mdl ?? "по запросу"} → ${price} L.`);
+  (await legacyQuery.run<Row>("UPDATE catalog_products SET price_mdl=?,price_mode='fixed' WHERE id=?", [price, id]));
+  (await legacyQuery.run<Row>("UPDATE part_offers SET price_mdl=? WHERE product_id=? AND supplier='own'", [price, id]));
+  (await audit(actor, "Правка цены", `${id}: ${before.price_mdl ?? "по запросу"} → ${price} L.`));
+
+}));
 }
 
 /** Сколько деталей уже заведено по каждому типу: частые типы показываются сверху. */
-export function partTypeUsage(): Record<string, number> {
+export async function partTypeUsage(): Promise<Record<string, number>> {
   const result: Record<string, number> = {};
-  for (const row of db().prepare("SELECT part_type_id AS id, COUNT(*) AS count FROM catalog_products WHERE part_type_id IS NOT NULL GROUP BY part_type_id").all()) {
+  for (const row of (await legacyQuery.all<Row>("SELECT part_type_id AS id, COUNT(*) AS count FROM catalog_products WHERE part_type_id IS NOT NULL GROUP BY part_type_id", []))) {
     result[String(row.id)] = Number(row.count);
   }
   return result;
 }
 
 /** Места на складе, которые уже использовались: подсказка при добавлении детали. */
-export function locationSuggestions(): string[] {
-  return db().prepare("SELECT DISTINCT location FROM catalog_products WHERE location IS NOT NULL AND location<>'' ORDER BY location LIMIT 40").all().map((row) => String(row.location));
+export async function locationSuggestions(): Promise<string[]> {
+  return (await legacyQuery.all<Row>("SELECT DISTINCT location FROM catalog_products WHERE location IS NOT NULL AND location<>'' ORDER BY location LIMIT 40", [])).map((row) => String(row.location));
 }
 
 /* ---------- Витрина ---------- */
 
 /** Детали, заведённые владельцем: попадают в каталог и на страницу донора. Скрытые не показываются. */
-export function publicParts(): PartRow[] {
-  return db().prepare(`${partSelect} WHERE COALESCE(p.hidden,0)=0 AND p.sku IS NOT NULL ORDER BY COALESCE(p.created_at,'') DESC LIMIT 500`).all().map(toPart);
+export async function publicParts(): Promise<PartRow[]> {
+  return (await legacyQuery.all<Row>(`${partSelect} WHERE COALESCE(p.hidden,0)=0 AND p.sku IS NOT NULL ORDER BY COALESCE(p.created_at,'') DESC`, [])).map(toPart);
 }
 
 export type PublicDonor = Omit<Donor, "parts"> & { parts: PartRow[] };
 
 /** Страница донора: сама машина и доступные с неё детали. */
-export function publicDonor(id: string): PublicDonor | null {
-  const donor = donorById(id);
+export async function publicDonor(id: string): Promise<PublicDonor | null> {
+  const donor = (await donorById(id));
   if (!donor || !donor.visible) return null;
-  return { ...donor, parts: partsOfDonor(id).filter((part) => !part.hidden) };
+  return { ...donor, parts: (await partsOfDonor(id)).filter((part) => !part.hidden) };
 }
 
-export function publicDonors(): Donor[] {
-  return listDonors().filter((donor) => donor.visible);
+export async function publicDonors(): Promise<Donor[]> {
+  return (await legacyQuery.all<Row>(`${donorSelect} WHERE d.visible=1 ORDER BY d.created_at DESC`, [])).map(toDonor);
 }
 
-export function offersOfPart(productId: string) {
-  return db().prepare("SELECT supplier,supplier_name,price_mdl,stock,lead_days FROM part_offers WHERE product_id=? ORDER BY supplier").all(productId).map((row) => ({
+export async function offersOfPart(productId: string) {
+  return (await legacyQuery.all<Row>("SELECT supplier,supplier_name,price_mdl,stock,lead_days FROM part_offers WHERE product_id=? ORDER BY supplier", [productId])).map((row) => ({
     supplier: String(row.supplier), supplierName: String(row.supplier_name),
     priceMdl: row.price_mdl === null ? null : Number(row.price_mdl), stock: Number(row.stock),
     leadDays: row.lead_days === null ? null : Number(row.lead_days),

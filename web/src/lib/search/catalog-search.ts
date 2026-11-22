@@ -35,7 +35,9 @@ function productScore(product: Product, query: string) {
   const article = normalizeArticle(query);
   if (article.length > 3 && normalizeArticle(product.sku) === article) return 1000;
   if (normalizeArticle(product.sku).includes(article) && article.length > 3) return 800;
-  if (containsEveryToken(`${product.name} ${product.brand} ${product.sku}`, query)) return 100;
+  if (normalizeArticle(product.oem ?? "") === article && article.length > 3) return 1000;
+  if (normalizeArticle(product.oem ?? "").includes(article) && article.length > 3) return 800;
+  if (containsEveryToken(`${product.name} ${product.brand} ${product.sku} ${product.oem ?? ""}`, query)) return 100;
   return 0;
 }
 

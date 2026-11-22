@@ -1,0 +1,7 @@
+import {currentStaff,sameOrigin} from '@/lib/staff-auth';
+import {saveVacancy,vacancies} from '@/lib/vacancies';
+import {many,run} from '@/lib/db';
+import {audit} from '@/lib/staff-db';
+export const runtime='nodejs';
+export async function GET(){const actor=await currentStaff();if(actor?.role!=='owner')return new Response(null,{status:403});return Response.json({vacancies:await vacancies(false),applications:await many('SELECT * FROM vacancy_applications ORDER BY id DESC')},{headers:{'Cache-Control':'no-store'}});}
+export async function POST(request:Request){if(!sameOrigin(request))return new Response(null,{status:403});const actor=await currentStaff();if(actor?.role!=='owner')return new Response(null,{status:403});try{const data=await request.json();if(data.action==='vacancy')await saveVacancy(actor,data);else if(data.action==='application'){const id=Number(data.id);if(!Number.isSafeInteger(id)||!['new','contacted','interview','hired','refused'].includes(data.stage))throw new Error('Проверьте статус.');if(!await run('UPDATE vacancy_applications SET stage=$2,notes=$3,task=$4 WHERE id=$1',[id,data.stage,String(data.notes??'').slice(0,3000),String(data.task??'').slice(0,500)]))throw new Error('Отклик не найден.');await audit(actor,'Отклик обновлён',String(id));}else return new Response(null,{status:400});return Response.json({ok:true});}catch(e){return Response.json({message:e instanceof Error?e.message:'Ошибка'}, {status:400});}}

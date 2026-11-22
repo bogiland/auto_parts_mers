@@ -52,6 +52,7 @@ export interface PostPreview {
 export interface Product {
   id: string;
   sku: string;
+  oem?: string;
   name: string;
   brand: string;
   priceMdl: number | null;

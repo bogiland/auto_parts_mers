@@ -8,7 +8,10 @@ import { ProductRail } from "@/components/product/ProductRail";
 import { SectionHeader } from "@/components/ui/section-header";
 import { getHomepage } from "@/lib/catalog-gateway";
 import { getLiveHomepage, toStoreProduct } from "@/lib/live-catalog";
-import { partById } from "@/lib/parts-db";
+import { partByPublicId } from "@/lib/parts-db";
+import { ReviewsBlock } from "@/components/reviews/ReviewsBlock";
+import { AdSlot } from "@/components/ads/AdSlot";
+import { rating } from "@/lib/reviews";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,7 +24,7 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps<"/products/[id]">) {
   const { id } = await params;
   const homepage = await getHomepage();
-  const own = partById(id);
+  const own = (await partByPublicId(id));
   const product = [...homepage.popularProducts, ...homepage.recommendedProducts].find((item) => item.id === id);
   const name = own && !own.hidden ? own.nameRu : product?.name;
   return { title: name ? `${name} — NAA.md` : "Товар не найден — NAA.md" };
@@ -29,26 +32,29 @@ export async function generateMetadata({ params }: PageProps<"/products/[id]">) 
 
 export default async function ProductPage({ params }: PageProps<"/products/[id]">) {
   const { id } = await params;
-  const homepage = await getLiveHomepage();
+  const homepage = await getLiveHomepage({ includeInventory: false });
   const products = [...homepage.popularProducts, ...homepage.recommendedProducts];
   // Деталь, заведённая в админке, живёт в базе склада, а не в демонстрационном наборе.
-  const own = partById(id);
-  const product = products.find((item) => item.id === id) ?? (own && !own.hidden ? toStoreProduct(own) : undefined);
+  const own = (await partByPublicId(id));
+  const product = products.find((item) => item.id === id || item.sku === id) ?? (own && !own.hidden ? (await toStoreProduct(own)) : undefined);
 
   if (!product) {
     notFound();
   }
 
   const recommendations = products.filter((item) => item.id !== product.id).slice(0, 6);
+  const summary=await rating(product.id);product.rating=summary?.average??0;product.reviewCount=summary?.count??0;
 
   return (
     <>
       <SiteHeader hours={homepage.hours} phone={homepage.phone} />
-      <main className="container-site section-stack bg-surface-2">
+      <main className="container-site section-stack bg-surface">
         <nav aria-label="Хлебные крошки" className="text-meta text-ink-2">
           <Link className="hover:text-accent" href="/">Главная</Link><span aria-hidden="true"> / </span><Link className="hover:text-accent" href="/catalog/legkovye">Каталог</Link><span aria-hidden="true"> / </span><span className="text-ink">{product.name}</span>
         </nav>
-        <ProductDetails product={product} />
+        <ProductDetails key={product.id} product={product} />
+        <AdSlot slot="product" />
+        <ReviewsBlock productId={product.id} compact />
         <section>
           <SectionHeader title="Похожие товары" />
           <ProductRail products={recommendations} />

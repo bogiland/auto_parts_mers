@@ -13,7 +13,7 @@ export const metadata = { title: "Вход в личный кабинет — NA
 
 export default async function LoginPage() {
   if (await currentCustomer()) redirect("/account");
-  const homepage = await getLiveHomepage();
+  const homepage = await getLiveHomepage({ includeInventory: false });
   return <>
     <SiteHeader hours={homepage.hours} phone={homepage.phone} />
     <main className="container-site section-stack">

@@ -20,6 +20,7 @@
 # production
 /build
 /data/*.sqlite*
+/data/migration-source/
 
 # misc
 .DS_Store

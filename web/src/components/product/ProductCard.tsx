@@ -2,6 +2,7 @@
 
 import { CartControl } from "@/components/cart/CartControl";
 import { FavoriteButton } from "@/components/favorites/FavoriteButton";
+import { useCurrency } from "@/components/header/CurrencySwitch";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -24,6 +25,7 @@ function oldPriceLabel(product: Product, discount: boolean) {
 }
 
 export function ProductCard({ className = "", discount = false, product }: ProductCardProps) {
+  const currency = useCurrency();
   const oldPrice = oldPriceLabel(product, discount);
   const isFixedPrice = product.priceMode === "fixed" && product.priceMdl;
   const images = product.images?.length ? product.images : [product.image];
@@ -39,13 +41,15 @@ export function ProductCard({ className = "", discount = false, product }: Produ
         {discount ? <span className="absolute bottom-0 left-0 rounded-badge bg-accent px-1.5 text-badge font-bold text-white">-9%</span> : null}
         {images.length > 1 ? <div aria-label={`Фотография 1 из ${images.length}`} className="absolute bottom-0 left-1/2 flex -translate-x-1/2 gap-1"><span className="h-1 w-1 rounded-full bg-accent" />{images.slice(1).map((entry) => <span className="h-1 w-1 rounded-full bg-line" key={entry.url} />)}</div> : null}
       </div>
-      <p className={`mt-2 whitespace-nowrap text-price font-bold ${discount && isFixedPrice ? "text-accent" : "text-ink"}`}>{priceLabel(product)}{oldPrice ? <span className="ml-2 text-meta font-normal text-ink-3 line-through">{oldPrice}</span> : null}</p>
+      <p className={`mt-2 whitespace-nowrap text-price font-bold ${discount && isFixedPrice ? "text-accent" : "text-ink"}`}>{currency === "rub" && product.priceRub !== undefined && product.priceMode === "fixed" ? `≈ ${product.priceRub.toLocaleString("ru-RU")} руб. ПМР` : priceLabel(product)}{oldPrice && currency === "mdl" ? <span className="ml-2 text-meta font-normal text-ink-3 line-through">{oldPrice}</span> : null}</p>
+      {product.priceRub !== undefined && product.priceMode === "fixed" && <p className="text-meta text-ink-2">{currency === "rub" ? priceLabel(product) : `≈ ${product.priceRub.toLocaleString("ru-RU")} руб. ПМР`}</p>}
       <p className="mt-1 truncate text-meta text-ink-2">{product.brand} · {product.sku}</p>
       <h3 className="mt-1 line-clamp-2 min-h-10 text-nav font-bold text-ink">{product.name}</h3>
+      {product.reviewCount>0&&<p className="text-meta text-ink-2 mt-2">★ {product.rating.toFixed(1)} · {product.reviewCount} отзывов</p>}
       <div className="mt-auto pt-2">
         <CartControl className="w-full" product={product} />
       </div>
-      <p className="mt-2 text-center text-meta text-ink-2">сегодня в 13:30</p>
+      <p className="mt-2 text-center text-meta text-ink-2">{(product.stock??0)>0?'В наличии · Слободзея':'Продано'}</p>
     </article>
   );
 }

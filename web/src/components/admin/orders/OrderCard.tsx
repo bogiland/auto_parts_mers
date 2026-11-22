@@ -15,7 +15,7 @@ type ReturnRow = { id: number; productName: string; decision: string; amountMdl:
 export type OrderDetail = {
   id: number; number: number; token: string; status: string; createdAt: string; source: string; name: string;
   phone: string; phoneMasked: string; address: string; comment: string; notes: string; deliveryTitle: string;
-  deliveryMethod: string; paymentTitle: string; paymentMethod: string; deliveryCostMdl: number; totalMdl: number;
+  deliveryMethod: string; paymentTitle: string; paymentMethod: string; deliveryCostMdl: number; deliveryCostAgreed: boolean; totalMdl: number;
   totalRub: number | null; againstAdvice: boolean; restricted: boolean; items: Item[]; history: History[];
   issuePhotos: Photo[]; receiptToken: string | null; receiptAt: string | null; stockWritten: boolean;
   cancelReason: string; waitingMinutes: number | null; version: number; next: string[];
@@ -64,7 +64,7 @@ export function OrderCard({ id, statusLabels, deliveryMethods, paymentMethods, v
   }, [id]);
 
   // Загрузка идёт в кадре после монтирования: так состояние не меняется прямо в теле эффекта.
-  useEffect(() => { const frame = requestAnimationFrame(() => void load()); return () => cancelAnimationFrame(frame); }, [load]);
+  useEffect(() => { const frame = requestAnimationFrame(async () => void (await load())); return () => cancelAnimationFrame(frame); }, [load]);
 
   async function run(body: Record<string, unknown>, success: string) {
     if (!order) return false;
@@ -144,19 +144,20 @@ export function OrderCard({ id, statusLabels, deliveryMethods, paymentMethods, v
       <div className="admin-card admin-sub-card">
         <h3>Получение и оплата</h3>
         <div className="admin-tabs">
-          {deliveryMethods.map((option) => <button className={option.id === order.deliveryMethod ? "is-active" : ""} disabled={busy} key={option.id} onClick={() => void run({ action: "delivery-method", method: option.id, address: order.address }, "Способ получения изменён")} type="button">{option.title}</button>)}
+          {deliveryMethods.map((option) => <button className={option.id === order.deliveryMethod ? "is-active" : ""} disabled={busy} key={option.id} onClick={async () => void (await run({ action: "delivery-method", method: option.id, address: order.address }, "Способ получения изменён"))} type="button">{option.title}</button>)}
         </div>
-        {delivery?.needsAddress && <label className="admin-field">Адрес доставки<input defaultValue={order.address} onBlur={(event) => { if (event.target.value !== order.address) void run({ action: "delivery-method", method: order.deliveryMethod, address: event.target.value }, "Адрес сохранён"); }} /></label>}
+        {delivery?.needsAddress && <label className="admin-field">Адрес доставки<input defaultValue={order.address} onBlur={async (event) => { if (event.target.value !== order.address) void (await run({ action: "delivery-method", method: order.deliveryMethod, address: event.target.value }, "Адрес сохранён")); }} /></label>}
         <div className="admin-tabs">
-          {paymentMethods.map((option) => <button className={option.id === order.paymentMethod ? "is-active" : ""} disabled={busy} key={option.id} onClick={() => void run({ action: "payment-method", method: option.id }, "Способ оплаты изменён")} type="button">{option.title}</button>)}
+          {paymentMethods.map((option) => <button className={option.id === order.paymentMethod ? "is-active" : ""} disabled={busy} key={option.id} onClick={async () => void (await run({ action: "payment-method", method: option.id }, "Способ оплаты изменён"))} type="button">{option.title}</button>)}
         </div>
         <div className="admin-form-grid">
           <label className="admin-field">Стоимость доставки, L.<input min="0" onChange={(event) => setDeliveryCost(event.target.value)} type="number" value={deliveryCost} /></label>
           <div className="admin-field"><span>Итого</span><strong>{money(total)}</strong>{order.totalRub !== null && <small className="admin-muted">товары ≈ {order.totalRub.toLocaleString("ru-RU")} руб</small>}</div>
         </div>
-        <button className="admin-button" disabled={busy || Number(deliveryCost || 0) === order.deliveryCostMdl} onClick={() => void run({ action: "delivery-cost", cost: Number(deliveryCost || 0) }, "Стоимость доставки сохранена")} type="button">Сохранить доставку и пересчитать итог</button>
+        {!order.deliveryCostAgreed && <p className="admin-warning">Стоимость доставки ещё не согласована. Сохраните 0, если доставка бесплатна или это самовывоз.</p>}
+        <button className="admin-button" disabled={busy || (order.deliveryCostAgreed && Number(deliveryCost || 0) === order.deliveryCostMdl)} onClick={async () => void (await run({ action: "delivery-cost", cost: Number(deliveryCost || 0) }, "Стоимость доставки сохранена"))} type="button">Сохранить доставку и пересчитать итог</button>
         <label className="admin-field admin-field-check">
-          <input checked={order.againstAdvice} disabled={busy} onChange={(event) => void run({ action: "against-advice", value: event.target.checked }, "Отметка сохранена")} type="checkbox" />
+          <input checked={order.againstAdvice} disabled={busy} onChange={async (event) => void (await run({ action: "against-advice", value: event.target.checked }, "Отметка сохранена"))} type="checkbox" />
           Клиент выбрал вопреки рекомендации подборщика
         </label>
         {order.againstAdvice && <p className="admin-warning">По такому выбору возврата не будет — предупредите клиента до выдачи.</p>}
@@ -182,11 +183,12 @@ export function OrderCard({ id, statusLabels, deliveryMethods, paymentMethods, v
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img alt="" src={photo.src} />
         </figure>)}</div>}
-        <ImagePicker label="Добавить фото выдачи" onChange={(next) => { const src = Object.values(next)[0]; if (src) void run({ action: "issue-photos", photos: [...order.issuePhotos.map((photo) => ({ src: photo.src, closeup: photo.closeup })), { src, closeup: false }] }, "Фото добавлено"); }} presets={["part"]} value={{}} />
+        <ImagePicker label="Добавить фото выдачи" onChange={async (next) => { const src = Object.values(next)[0]; if (src) void (await run({ action: "issue-photos", photos: [...order.issuePhotos.map((photo) => ({ src: photo.src, closeup: photo.closeup })), { src, closeup: false }] }, "Фото добавлено")); }} presets={["part"]} value={{}} />
       </div>
 
       <div className="admin-card admin-sub-card">
         <h3>Сообщение клиенту</h3>
+        {order.status==='issued'&&<p className="admin-note">Ссылка для отзыва: <a href="/reviews" target="_blank" rel="noreferrer">страница отзывов</a> <button type="button" onClick={async()=>{try{await navigator.clipboard.writeText(`${window.location.origin}/reviews`);setCopied(true);}catch{setCopied(false);}}}>Скопировать ссылку</button></p>}
         <div className="admin-tabs">
           <button className={language === "ru" ? "is-active" : ""} onClick={() => setLanguage("ru")} type="button">Русский</button>
           <button className={language === "ro" ? "is-active" : ""} onClick={() => setLanguage("ro")} type="button">Румынский</button>
@@ -207,16 +209,16 @@ export function OrderCard({ id, statusLabels, deliveryMethods, paymentMethods, v
                 <a className="admin-ghost-button" href={`viber://forward?text=${encodeURIComponent(`${message.ru} Чек: ${window.location.origin}/receipt/${order.receiptToken}`)}`}>Отправить в Viber</a>
                 <a className="admin-ghost-button" href={`https://t.me/share/url?url=${encodeURIComponent(`${window.location.origin}/receipt/${order.receiptToken}`)}&text=${encodeURIComponent(message.ru)}`} rel="noreferrer" target="_blank">Отправить в Telegram</a>
               </div>
-              <label className="admin-field">Номер фискального чека, если он нужен бухгалтеру<input defaultValue="" onBlur={(event) => { if (event.target.value.trim()) void run({ action: "fiscal-number", value: event.target.value }, "Номер фискального чека сохранён"); }} /></label>
+              <label className="admin-field">Номер фискального чека, если он нужен бухгалтеру<input defaultValue="" onBlur={async (event) => { if (event.target.value.trim()) void (await run({ action: "fiscal-number", value: event.target.value }, "Номер фискального чека сохранён")); }} /></label>
             </>
           : <p className="admin-muted">{order.status === "issued" ? "Нажмите «Чек», чтобы сформировать документ." : "Чек формируется, когда заказ переведён в «Выдан»."}</p>}
-        {!order.receiptToken && order.status === "issued" && <button className="admin-button" disabled={busy} onClick={() => void run({ action: "receipt" }, "Чек сформирован")} type="button">Чек</button>}
+        {!order.receiptToken && order.status === "issued" && <button className="admin-button" disabled={busy} onClick={async () => void (await run({ action: "receipt" }, "Чек сформирован"))} type="button">Чек</button>}
       </div>
 
       <div className="admin-card admin-sub-card">
         <h3>Внутренние заметки</h3>
         <textarea onChange={(event) => setNotes(event.target.value)} rows={3} value={notes} />
-        <button className="admin-ghost-button" disabled={busy || notes === order.notes} onClick={() => void run({ action: "order-notes", notes }, "Заметка сохранена")} type="button">Сохранить заметку</button>
+        <button className="admin-ghost-button" disabled={busy || notes === order.notes} onClick={async () => void (await run({ action: "order-notes", notes }, "Заметка сохранена"))} type="button">Сохранить заметку</button>
       </div>
 
       {returns.length > 0 && <div className="admin-card admin-sub-card">
