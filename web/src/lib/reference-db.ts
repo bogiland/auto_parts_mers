@@ -394,9 +394,8 @@ export async function deleteBrand(actor: Staff, id: string) {
 
 /* ---------- Файлы изображений ---------- */
 
-export function saveImage(value: string, maxBytes = 600_000): string {
-  if (!value) return "";
-  if (value.startsWith("/uploads/")) return value;
+/** Разбор и проверка картинки общая для публичного и закрытого хранилища. */
+function decodeImage(value: string, maxBytes: number) {
   const match = /^data:image\/(webp|jpeg|png);base64,([A-Za-z0-9+/=]+)$/.exec(value);
   if (!match) throw new Error("Неверный формат картинки.");
   const bytes = Buffer.from(match[2], "base64");
@@ -405,11 +404,35 @@ export function saveImage(value: string, maxBytes = 600_000): string {
   const signature = bytes.toString("hex", 0, 4);
   const webp = signature === "52494646" && bytes.toString("ascii", 8, 12) === "WEBP";
   if (!(webp || signature.startsWith("ffd8ff") || signature === "89504e47")) throw new Error("Неверный формат картинки.");
+  return { bytes, filename: `${randomBytes(16).toString("hex")}.${match[1] === "jpeg" ? "jpg" : match[1]}` };
+}
+
+export function saveImage(value: string, maxBytes = 600_000): string {
+  if (!value) return "";
+  if (value.startsWith("/uploads/")) return value;
+  const { bytes, filename } = decodeImage(value, maxBytes);
   const directory = path.join(process.cwd(), "public", "uploads");
   mkdirSync(directory, { recursive: true });
-  const filename = `${randomBytes(16).toString("hex")}.${match[1] === "jpeg" ? "jpg" : match[1]}`;
   writeFileSync(path.join(directory, filename), bytes, { flag: "wx" });
   return `/uploads/${filename}`;
+}
+
+/** Каталог закрытых файлов: лежит вне public, поэтому Next его сам не отдаёт. */
+export const privateUploadDir = path.join(process.cwd(), "private-uploads");
+
+/**
+ * Фото выдачи — доказательство по конкретному заказу с лицами, номерами и адресом
+ * на фоне. В public/uploads такой файл открывается по прямой ссылке кому угодно,
+ * поэтому он пишется рядом, но вне public, и отдаётся только через маршрут с проверкой прав.
+ */
+export function savePrivateImage(value: string, maxBytes = 900_000): string {
+  if (!value) return "";
+  if (value.startsWith("/api/staff/issue-photo/") || value.startsWith("/uploads/")) return value;
+  const { bytes, filename } = decodeImage(value, maxBytes);
+  const directory = path.join(privateUploadDir, "issue");
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(path.join(directory, filename), bytes, { flag: "wx" });
+  return `/api/staff/issue-photo/${filename}`;
 }
 
 /* ---------- Публичная витрина ---------- */

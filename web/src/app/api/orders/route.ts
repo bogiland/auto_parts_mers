@@ -1,7 +1,7 @@
 import { isValidPhoneNumber } from "libphonenumber-js";
 import { createOrder, OrderError, type OrderInput } from "@/lib/checkout-db";
 import { currentCustomer } from "@/lib/customer-auth";
-import { attachOrderToCustomer } from "@/lib/customer-db";
+import { guestCookieHeader, readGuestId } from "@/lib/guest-session";
 
 export const runtime = "nodejs";
 
@@ -17,16 +17,20 @@ export async function POST(request: Request) {
   if (typeof input.address !== "string" || input.address.length > 500) return invalid("address", "Проверьте адрес.");
   if (typeof input.comment !== "string" || input.comment.length > 2000) return invalid("comment", "Комментарий слишком длинный.");
   if (!Array.isArray(input.items)) return invalid("items", "Проверьте состав корзины.");
+  // Владелец заказа известен до вставки: вошедший покупатель — по кабинету,
+  // гость — по куке браузера. Привязка происходит в той же транзакции, что и создание,
+  // поэтому чужой заказ в кабинет попасть не может.
+  const customer = await currentCustomer();
+  const { guestId, fresh } = await readGuestId();
+  const headers: Record<string, string> = { "Cache-Control": "no-store" };
+  if (!customer && fresh) headers["Set-Cookie"] = guestCookieHeader(guestId);
   try {
-    const order = (await createOrder(input));
-    // Заказ вошедшего покупателя сразу виден в его истории заказов.
-    const customer = await currentCustomer();
-    if (customer) (await attachOrderToCustomer(order.number - 1000, customer.id));
-    return Response.json(order, { status: 201, headers: { "Cache-Control": "no-store" } });
+    const order = (await createOrder(input, { customerId: customer?.id ?? null, guestId }));
+    return Response.json(order, { status: 201, headers });
   }
   catch (error) {
-    if (error instanceof OrderError) return Response.json({ field: error.field, message: error.message }, { status: error.status });
+    if (error instanceof OrderError) return Response.json({ field: error.field, message: error.message }, { status: error.status, headers });
     console.error("Order creation failed", error);
-    return Response.json({ field: "submit", message: "Не удалось отправить заказ. Повторите попытку." }, { status: 500 });
+    return Response.json({ field: "submit", message: "Не удалось отправить заказ. Повторите попытку." }, { status: 500, headers });
   }
 }

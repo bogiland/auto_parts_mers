@@ -1,5 +1,6 @@
 import "server-only";
 
+import { categoryBasePath, categoryHref } from "@/data/directions.seed";
 import { getHomepage } from "@/lib/catalog-gateway";
 import { getCheckoutCatalog, getSettings } from "@/lib/checkout-db";
 import { publicCategories } from "@/lib/reference-db";
@@ -26,9 +27,9 @@ export async function ownCategoryGroups() {
   return (await publicCategories()).map((category) => ({
     id: category.id,
     label: category.name,
-    href: `/catalog/legkovye/${category.slug}`,
+    href: categoryHref(category.slug),
     image: category.image,
-    children: category.children.map((child) => ({ id: child.id, title: child.name, href: `/catalog/legkovye/${child.slug}`, image: child.image })),
+    children: category.children.map((child) => ({ id: child.id, title: child.name, href: `${categoryBasePath(category.slug)}/${child.slug}`, image: child.image })),
   }));
 }
 

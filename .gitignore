@@ -11,3 +11,9 @@ api/**/obj/
 .DS_Store
 Thumbs.db
 *.log
+
+# Local DB dumps
+backups/
+
+# Приватные файлы (фото выдачи и осмотра)
+web/private-uploads/

@@ -4,13 +4,18 @@ import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import settingsDefaults from "../../config/checkout-settings.json";
 import { homepageSeed } from "@/data/homepage.seed";
-import { inTx, many, one, run, tx } from "@/lib/db";
+import { inTx, many, one, run, txBound } from "@/lib/db";
 import { clientDiscount, discountedPrice } from "@/lib/client-pricing";
 
 type Settings = Omit<typeof settingsDefaults, "rubPerMdl"> & { rubPerMdl: number | null };
 export type CheckoutSettings = Settings;
 export type OrderLine = { id: string; name: string; quantity: number; unitPriceMdl: number; unitPriceRub: number | null };
 export type OrderResult = { number: number; token: string; items: OrderLine[]; totalMdl: number; totalRub: number | null; deliveryTitle: string; paymentTitle: string; operatorMessage: string; viberUrl: string | null; telegramUrl: string | null; status: string };
+/** Кто оформляет заказ: вошедший покупатель или гостевая сессия браузера.
+ *  Ключ идемпотентности действует только внутри своей области. */
+export type OrderOwner = { customerId: number | null; guestId: string };
+export function ownerScope(owner: OrderOwner) { return owner.customerId ? `c:${owner.customerId}` : `g:${owner.guestId}`; }
+
 export type OrderInput = { key: string; name: string; phone: string; contactMethod: string; deliveryMethod: string; address: string; paymentMethod: string; comment: string; agreed: boolean; restrictedAgreed: boolean; items: { id: string; quantity: number }[] };
 
 // Таблицы создаёт db/schema.sql (npm run db:migrate). Здесь остаётся только наполнение
@@ -144,13 +149,18 @@ export class OrderError extends Error {
   constructor(public status: number, public field: string, message: string) { super(message); }
 }
 
-export async function createOrder(input: OrderInput): Promise<OrderResult> {
+export async function createOrder(input: OrderInput, owner: OrderOwner): Promise<OrderResult> {
   await ensureSeeded();
   const settings = await getSettings();
-  return (await tx(async (client) => {
+  const scope = ownerScope(owner);
+  return (await txBound(async (client) => {
     // Повторная отправка той же формы возвращает прежний заказ, а не создаёт второй.
+    // Но только своей сессии: по чужому ключу заказ и его токен не выдаются.
     const previous = await inTx.one(client, "SELECT * FROM orders WHERE idempotency_key = $1", [input.key]);
-    if (previous) return (await buildOrder(previous, settings, client))!;
+    if (previous) {
+      if (previous.owner_scope !== scope) throw new OrderError(409, "items", "Обновите страницу и оформите заказ заново.");
+      return (await buildOrder(previous, settings, client))!;
+    }
 
     const delivery = settings.deliveryMethods.find((option) => option.id === input.deliveryMethod);
     const payment = settings.paymentMethods.find((option) => option.id === input.paymentMethod);
@@ -190,11 +200,20 @@ export async function createOrder(input: OrderInput): Promise<OrderResult> {
     const now = new Date().toISOString();
     const created = await inTx.one<{ id: number }>(client,
       `INSERT INTO orders (idempotency_key, token, name, phone, contact_method, delivery_method, delivery_title,
-         address, payment_method, payment_title, comment, total_mdl, total_rub, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
+         address, payment_method, payment_title, comment, total_mdl, total_rub, created_at, owner_scope, customer_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+       ON CONFLICT (idempotency_key) DO NOTHING RETURNING id`,
       [input.key, token, input.name.trim(), input.phone, input.contactMethod, delivery.id, delivery.title,
-        delivery.needsAddress ? input.address.trim() : "", payment.id, payment.title, input.comment.trim(), totalMdl, totalRub, now],
+        delivery.needsAddress ? input.address.trim() : "", payment.id, payment.title, input.comment.trim(), totalMdl, totalRub, now,
+        scope, owner.customerId],
     );
+    // Два одновременных повтора с одним ключом: вставка удалась ровно одной из них,
+    // вторая дожидается и забирает уже созданный заказ. Дубля не возникает.
+    if (!created) {
+      const winner = await inTx.one(client, "SELECT * FROM orders WHERE idempotency_key = $1", [input.key]);
+      if (!winner || winner.owner_scope !== scope) throw new OrderError(409, "items", "Обновите страницу и оформите заказ заново.");
+      return (await buildOrder(winner, settings, client))!;
+    }
     const orderId = Number(created?.id);
     for (const line of lines) {
       await inTx.run(client,

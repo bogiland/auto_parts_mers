@@ -3,6 +3,7 @@
 import { ChevronDown, ChevronRight, Menu, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useId, useState } from "react";
+import { categoryBasePath, categoryHref } from "@/data/directions.seed";
 import type { PublicCategory } from "@/lib/reference-db";
 
 const catalogItems = [
@@ -30,11 +31,16 @@ export function CatalogButton({ mobile = false, categories }: CatalogButtonProps
   const [expanded, setExpanded] = useState<string | null>(null);
   const panelId = useId();
   const items = categories.length
-    ? categories.map(category => ({ label: category.name, href: `/catalog/legkovye/${category.slug}`, children: category.children }))
-    : catalogItems.map(([label, href]) => ({ label, href, children: [] }));
+    ? categories.map(category => ({
+      label: category.name,
+      href: categoryHref(category.slug),
+      base: categoryBasePath(category.slug),
+      children: category.children,
+    }))
+    : catalogItems.map(([label, href]) => ({ label, href, base: "/catalog/legkovye", children: [] }));
   const selected = items.find(item => item.href === expanded);
   const subcategories = (item: typeof items[number]) => <ul className="grid gap-1 p-2">
-    {item.children.map(child => <li key={child.id}><Link className="block rounded-ui px-4 py-2 text-body text-ink hover:bg-surface-2" href={`/catalog/legkovye/${child.slug}`} onClick={() => setOpen(false)}>{child.name}</Link></li>)}
+    {item.children.map(child => <li key={child.id}><Link className="block rounded-ui px-4 py-2 text-body text-ink hover:bg-surface-2" href={`${item.base}/${child.slug}`} onClick={() => setOpen(false)}>{child.name}</Link></li>)}
   </ul>;
 
   useEffect(() => {

@@ -178,6 +178,17 @@ CREATE INDEX IF NOT EXISTS orders_phone ON orders (phone);
 CREATE INDEX IF NOT EXISTS orders_customer ON orders (customer_id);
 CREATE INDEX IF NOT EXISTS orders_receipt ON orders (receipt_token);
 
+/* П1 · безопасность заказов.
+   owner_scope — кто оформил заказ: «c:<id кабинета>» или «g:<гостевая сессия>».
+   Ключ идемпотентности действует только внутри своей области, поэтому чужой
+   повтор не получает ни заказ, ни его токен. У старых записей NULL: они
+   читаются как раньше, но повтор по их ключу уже не выдаётся.
+   receipt_expires_at / receipt_revoked — срок и отзыв ссылки на чек. */
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS owner_scope text;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS receipt_expires_at text;
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS receipt_revoked integer NOT NULL DEFAULT 0;
+CREATE INDEX IF NOT EXISTS orders_owner_scope ON orders (owner_scope);
+
 CREATE TABLE IF NOT EXISTS order_items (
   order_id integer NOT NULL REFERENCES orders (id) ON DELETE CASCADE,
   product_id text NOT NULL,

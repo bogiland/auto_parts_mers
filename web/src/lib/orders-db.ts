@@ -5,7 +5,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { getSettings, type CheckoutSettings } from "@/lib/checkout-db";
 import { audit, maskPhone, phoneVariants, toInternational, type Staff } from "@/lib/staff-db";
 import { conditionLabel } from "@/lib/parts-db";
-import { saveImage } from "@/lib/reference-db";
+import { savePrivateImage } from "@/lib/reference-db";
 import { parsePhotos, type Photo } from "@/lib/photos";
 import { clientDiscount, discountedPrice } from "@/lib/client-pricing";
 
@@ -326,7 +326,7 @@ return (await transaction(async () => {
   if (!Array.isArray(photos) || photos.length > 6) throw new Error("Можно приложить до 6 фото.");
   const stored = photos.map((item) => {
     const photo = typeof item === "string" ? { src: item, closeup: false } : (item as Photo);
-    return { src: saveImage(String(photo?.src ?? ""), 900_000), closeup: Boolean(photo?.closeup) };
+    return { src: savePrivateImage(String(photo?.src ?? ""), 900_000), closeup: Boolean(photo?.closeup) };
   }).filter((photo) => photo.src);
   (await legacyQuery.run<Row>("UPDATE orders SET issue_photos_json=?, version=version+1 WHERE id=?", [JSON.stringify(stored), id]));
   (await audit(actor, "Фото при выдаче", `№ ${id + 1000}: ${stored.length} фото`));
@@ -461,7 +461,7 @@ return (await transaction(async () => {
   if (decision === "refused" && amount !== 0) throw new Error("При отказе сумма возврата — ноль.");
   const photos = Array.isArray(input.photos) ? input.photos.slice(0, 6).map((raw) => {
     const photo = typeof raw === "string" ? { src: raw, closeup: false } : (raw as Photo);
-    return { src: saveImage(String(photo?.src ?? ""), 900_000), closeup: Boolean(photo?.closeup) };
+    return { src: savePrivateImage(String(photo?.src ?? ""), 900_000), closeup: Boolean(photo?.closeup) };
   }).filter((photo) => photo.src) : [];
   (await legacyQuery.run<Row>("INSERT INTO order_returns(order_id,product_id,product_name,inspection,photos_json,decision,amount_mdl,reason,actor_name,at) VALUES(?,?,?,?,?,?,?,?,?,?)", [orderId, productId, item.name, (typeof input.inspection === "string" ? input.inspection.trim() : "").slice(0, 1000), JSON.stringify(photos), decision, amount, reason, actor.name, now()]));
   (await audit(actor, "Решение по возврату", `№ ${order.number}: ${item.name} — ${returnDecisions.find((option) => option.id === decision)?.label}, ${amount} L.`));
@@ -511,19 +511,59 @@ return (await transaction(async () => {
   const existing = (row.receipt_token as string | null) ?? null;
   if (existing) return { token: existing, created: false };
   const token = randomBytes(16).toString("hex");
-  const document = { ...snapshot(order, (await getSettings()), actor, origin), issuedAt: now() };
-  (await legacyQuery.run<Row>("UPDATE orders SET receipt_token=?, receipt_at=?, receipt_json=?, version=version+1 WHERE id=?", [token, now(), JSON.stringify(document), id]));
+  const settings = await getSettings();
+  const document = { ...snapshot(order, settings, actor, origin), issuedAt: now() };
+  // Ссылка на чек живёт ограниченный срок: документ остаётся в заказе навсегда,
+  // но публичный адрес перестаёт открываться и его можно отозвать раньше.
+  const expires = new Date(Date.now() + receiptLinkDays(settings) * 24 * 60 * 60 * 1000).toISOString();
+  (await legacyQuery.run<Row>("UPDATE orders SET receipt_token=?, receipt_at=?, receipt_json=?, receipt_expires_at=?, receipt_revoked=0, version=version+1 WHERE id=?", [token, now(), JSON.stringify(document), expires, id]));
   (await audit(actor, "Чек выдан", `№ ${order.number}`));
-  return { token, created: true };
+  return { token, created: true, expiresAt: expires };
 
 }));
 }
 
-export async function receiptByToken(token: string): Promise<ReceiptSnapshot | null> {
+function receiptLinkDays(settings: CheckoutSettings) {
+  const value = Number((settings.receipt as { linkDays?: unknown }).linkDays);
+  return Number.isSafeInteger(value) && value > 0 && value <= 365 ? value : 30;
+}
+
+export type ReceiptAccess = { receipt: ReceiptSnapshot; orderId: number; customerId: number | null; expiresAt: string | null };
+
+/**
+ * Чек по публичной ссылке. Просроченная и отозванная ссылка не открывается вовсе.
+ * Персональные данные здесь ещё не скрыты — это делает страница, по тому,
+ * кто смотрит: сотрудник, владелец кабинета или посторонний с ссылкой.
+ */
+export async function receiptByToken(token: string): Promise<ReceiptAccess | null> {
   if (!/^[a-f0-9]{32}$/i.test(token)) return null;
-  const row = (await legacyQuery.get<Row>("SELECT receipt_json FROM orders WHERE receipt_token=?", [token]));
+  const row = (await legacyQuery.get<Row>("SELECT id, customer_id, receipt_json, receipt_expires_at, receipt_revoked FROM orders WHERE receipt_token=?", [token]));
   if (!row?.receipt_json) return null;
-  return JSON.parse(String(row.receipt_json)) as ReceiptSnapshot;
+  if (Number(row.receipt_revoked ?? 0) === 1) return null;
+  const expiresAt = (row.receipt_expires_at as string | null) ?? null;
+  if (expiresAt && Date.parse(expiresAt) <= Date.now()) return null;
+  return {
+    receipt: JSON.parse(String(row.receipt_json)) as ReceiptSnapshot,
+    orderId: Number(row.id),
+    customerId: row.customer_id === null ? null : Number(row.customer_id),
+    expiresAt,
+  };
+}
+
+/** Гостю по ссылке достаётся документ без имени, телефона и адреса. */
+export function maskReceipt(receipt: ReceiptSnapshot): ReceiptSnapshot {
+  return { ...receipt, clientName: "Покупатель", clientPhone: maskPhone(receipt.clientPhone), address: "" };
+}
+
+/** Ссылку можно отозвать: адрес перестаёт открываться, сам чек в заказе остаётся. */
+export async function revokeReceipt(actor: Staff, id: number, version: unknown) {
+return (await transaction(async () => {
+  const row = (await lockedRow(id, version));
+  if (!row.receipt_token) throw new Error("Чек ещё не сформирован.");
+  (await legacyQuery.run<Row>("UPDATE orders SET receipt_revoked=1, version=version+1 WHERE id=?", [id]));
+  (await audit(actor, "Ссылка на чек отозвана", `№ ${id + 1000}`));
+
+}));
 }
 
 export async function setFiscalNumber(actor: Staff, id: number, value: unknown, version: unknown) {

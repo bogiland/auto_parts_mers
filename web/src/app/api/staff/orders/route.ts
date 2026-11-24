@@ -3,7 +3,7 @@ import { cookieName, sameOrigin } from "@/lib/staff-auth";
 import { revealPhone, session } from "@/lib/staff-db";
 import {
   buildReceipt, changeStatus, clientByPhone, createCallOrder, createReturn, messageTemplates, orderDetail,
-  returnsOfOrder, searchParts, setAgainstAdvice, setDeliveryCost, setDeliveryMethod, setFiscalNumber,
+  returnsOfOrder, revokeReceipt, searchParts, setAgainstAdvice, setDeliveryCost, setDeliveryMethod, setFiscalNumber,
   setIssuePhotos, setOrderNotes, setPaymentMethod,
 } from "@/lib/orders-db";
 import { getSettings } from "@/lib/checkout-db";
@@ -33,12 +33,16 @@ export async function POST(request: Request) {
         return json({ ok: true, ...result, url: `/receipt/${result.token}` });
       }
       case "fiscal-number": (await setFiscalNumber(actor, id(), body.value, body.version)); break;
+      case "receipt-revoke": (await revokeReceipt(actor, id(), body.version)); break;
       case "delivery-method": (await setDeliveryMethod(actor, id(), body.method, body.address, body.version)); break;
       case "payment-method": (await setPaymentMethod(actor, id(), body.method, body.version)); break;
       case "order-detail": {
         const order = (await orderDetail(id()));
         if (!order) throw new Error("Заказ не найден.");
-        return json({ ok: true, order, returns: (await returnsOfOrder(order.id)), message: messageTemplates(order, (await getSettings())) });
+        // В обычном ответе телефона нет — только маска. Полный номер отдаётся
+        // отдельным действием «order-phone», и каждый такой показ попадает в журнал.
+        const { phone: _hidden, ...safe } = order;
+        return json({ ok: true, order: safe, returns: (await returnsOfOrder(order.id)), message: messageTemplates(order, (await getSettings())) });
       }
       case "create-return": (await createReturn(actor, body)); break;
       case "create-call-order": return json({ ok: true, ...(await createCallOrder(actor, body)) });

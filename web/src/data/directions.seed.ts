@@ -71,6 +71,20 @@ export function sourceCategorySlug(categoryPathSlugValue: string) {
   return Object.entries(categoryPathSlugs).find(([, publicSlug]) => publicSlug === categoryPathSlugValue)?.[0] ?? categoryPathSlugValue;
 }
 
+/**
+ * Адрес раздела каталога. Если у раздела есть собственная страница направления
+ * («Автохимия» — /catalog/avtohimiya), ссылка ведёт туда, а не внутрь легковых:
+ * иначе один и тот же раздел живёт по двум адресам.
+ */
+export function categoryBasePath(categorySlug: string) {
+  return directionHomes.some((direction) => direction.slug === categorySlug) ? `/catalog/${categorySlug}` : "/catalog/legkovye";
+}
+
+export function categoryHref(categorySlug: string) {
+  const base = categoryBasePath(categorySlug);
+  return base === `/catalog/${categorySlug}` ? base : `${base}/${categorySlug}`;
+}
+
 export function getDirectionHome(slug: string) {
   return directionHomes.find((direction) => direction.slug === slug);
 }

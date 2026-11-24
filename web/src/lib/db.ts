@@ -77,6 +77,17 @@ export async function tx<T>(work: (client: PoolClient) => Promise<T>): Promise<T
   }
 }
 
+/**
+ * Транзакция, к которой привязаны и обычные помощники one/many/run.
+ * Без этой привязки вложенный запрос берёт из пула ВТОРОЕ соединение, хотя
+ * первое уже занято транзакцией. При десятке одновременных оформлений пул
+ * выбирается целиком, и все ждут соединения, которое освободится только после
+ * них самих — сайт встаёт. Здесь вложенные запросы идут по тому же соединению.
+ */
+export async function txBound<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {
+  return tx((client) => context.run(client, () => work(client)));
+}
+
 /** Те же помощники, но внутри транзакции. */
 export const inTx = {
   async many<T extends QueryResultRow = QueryResultRow>(client: PoolClient, text: string, values: unknown[] = []): Promise<T[]> {

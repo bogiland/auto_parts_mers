@@ -14,7 +14,7 @@ type History = { from: string; to: string; actor: string; comment: string; at: s
 type ReturnRow = { id: number; productName: string; decision: string; amountMdl: number; reason: string; actor: string; at: string };
 export type OrderDetail = {
   id: number; number: number; token: string; status: string; createdAt: string; source: string; name: string;
-  phone: string; phoneMasked: string; address: string; comment: string; notes: string; deliveryTitle: string;
+  phoneMasked: string; address: string; comment: string; notes: string; deliveryTitle: string;
   deliveryMethod: string; paymentTitle: string; paymentMethod: string; deliveryCostMdl: number; deliveryCostAgreed: boolean; totalMdl: number;
   totalRub: number | null; againstAdvice: boolean; restricted: boolean; items: Item[]; history: History[];
   issuePhotos: Photo[]; receiptToken: string | null; receiptAt: string | null; stockWritten: boolean;
@@ -87,9 +87,10 @@ export function OrderCard({ id, statusLabels, deliveryMethods, paymentMethods, v
     <section aria-label="Заказ" className="admin-detail" role="dialog"><header><h2>Заказ</h2><button aria-label="Закрыть" onClick={onClose} type="button"><X size={22} /></button></header>{error ? <p className="admin-error" role="alert">{error}</p> : <p className="admin-muted">Открываем…</p>}</section>
   </div>;
 
-  const tel = order.phone.replace(/[^\d+]/g, "");
-  const viber = viberBase || `viber://chat?number=${encodeURIComponent(tel)}`;
-  const telegram = telegramBase || `https://t.me/+${tel.replace(/\D/g, "")}`;
+  // Номер приходит только по кнопке «Показать номер»: этот показ журналируется.
+  const tel = (phone ?? "").replace(/[^\d+]/g, "");
+  const viber = viberBase || (tel ? `viber://chat?number=${encodeURIComponent(tel)}` : "");
+  const telegram = telegramBase || (tel ? `https://t.me/+${tel.replace(/\D/g, "")}` : "");
   const goods = order.items.reduce((sum, item) => sum + item.unitPriceMdl * item.quantity, 0);
   const total = goods + Number(deliveryCost || 0);
   const delivery = deliveryMethods.find((option) => option.id === order.deliveryMethod);
@@ -115,11 +116,13 @@ export function OrderCard({ id, statusLabels, deliveryMethods, paymentMethods, v
           <div className="admin-tree-name"><strong>{order.name}</strong><small className="admin-muted">{phone ?? order.phoneMasked}</small></div>
           {!phone && <button className="admin-ghost-button" onClick={async () => { const data = await staffCall<{ phone: string }>("orders", { action: "order-phone", id: order.id }); setPhone(data.phone); }} type="button">Показать номер</button>}
         </div>
-        <div className="admin-image-actions">
-          <a className="admin-ghost-button" href={`tel:${tel}`}><Phone size={16} />Позвонить</a>
-          <a className="admin-ghost-button" href={viber}><MessageSquare size={16} />Viber</a>
-          <a className="admin-ghost-button" href={telegram} rel="noreferrer" target="_blank"><Send size={16} />Telegram</a>
-        </div>
+        {tel
+          ? <div className="admin-image-actions">
+              <a className="admin-ghost-button" href={`tel:${tel}`}><Phone size={16} />Позвонить</a>
+              {viber && <a className="admin-ghost-button" href={viber}><MessageSquare size={16} />Viber</a>}
+              {telegram && <a className="admin-ghost-button" href={telegram} rel="noreferrer" target="_blank"><Send size={16} />Telegram</a>}
+            </div>
+          : <p className="admin-muted">Чтобы позвонить или написать, сначала покажите номер.</p>}
         {order.comment && <p className="admin-note">Комментарий клиента: {order.comment}</p>}
       </div>
 
@@ -201,13 +204,14 @@ export function OrderCard({ id, statusLabels, deliveryMethods, paymentMethods, v
         <h3>Чек</h3>
         {order.receiptToken
           ? <>
-              <p className="admin-muted">Чек сформирован {order.receiptAt ? when(order.receiptAt) : ""} и сохранён в заказе — его можно открыть повторно.</p>
+              <p className="admin-muted">Чек сформирован {order.receiptAt ? when(order.receiptAt) : ""} и сохранён в заказе — его можно открыть повторно. Публичная ссылка действует ограниченный срок; посторонний по ней видит чек без имени, телефона и адреса.</p>
               <div className="admin-image-actions">
                 <a className="admin-button" href={`/receipt/${order.receiptToken}`} rel="noreferrer" target="_blank"><FileDown size={16} />Открыть чек</a>
                 <a className="admin-ghost-button" href={`/receipt/${order.receiptToken}?print=1`} rel="noreferrer" target="_blank"><Printer size={16} />Печать</a>
                 <a className="admin-ghost-button" href={`/receipt/${order.receiptToken}?doc=invoice`} rel="noreferrer" target="_blank">Накладная</a>
                 <a className="admin-ghost-button" href={`viber://forward?text=${encodeURIComponent(`${message.ru} Чек: ${window.location.origin}/receipt/${order.receiptToken}`)}`}>Отправить в Viber</a>
                 <a className="admin-ghost-button" href={`https://t.me/share/url?url=${encodeURIComponent(`${window.location.origin}/receipt/${order.receiptToken}`)}&text=${encodeURIComponent(message.ru)}`} rel="noreferrer" target="_blank">Отправить в Telegram</a>
+                <button className="admin-ghost-button" disabled={busy} onClick={async () => { if (window.confirm("Отозвать ссылку на чек? Адрес перестанет открываться, сам чек останется в заказе.")) void (await run({ action: "receipt-revoke" }, "Ссылка отозвана")); }} type="button">Отозвать ссылку</button>
               </div>
               <label className="admin-field">Номер фискального чека, если он нужен бухгалтеру<input defaultValue="" onBlur={async (event) => { if (event.target.value.trim()) void (await run({ action: "fiscal-number", value: event.target.value }, "Номер фискального чека сохранён")); }} /></label>
             </>

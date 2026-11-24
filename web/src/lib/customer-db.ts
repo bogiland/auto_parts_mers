@@ -150,6 +150,10 @@ return (await transaction(async () => {
   (await legacyQuery.run<Row>("UPDATE customers SET password_hash=? WHERE id=?", [hashPassword(value), customer.id]));
   // Пароль сменили — остальные устройства разлогиниваются.
   (await legacyQuery.run<Row>("UPDATE customer_sessions SET revoked=1 WHERE customer_id=?", [customer.id]));
+  // У доступа сотрудника, выданного этому покупателю, своего пароля нет: он сверяется
+  // с паролем кабинета. Значит старый пароль не должен оставлять живой и рабочую сессию —
+  // отзываем её в той же транзакции, иначе смена пароля защищает только витрину.
+  (await legacyQuery.run<Row>("UPDATE staff_sessions SET revoked=1 WHERE user_id IN (SELECT id FROM staff_users WHERE customer_id=?)", [customer.id]));
 
 }));
 }
@@ -229,10 +233,6 @@ export async function customerOrders(customer: Customer): Promise<CustomerOrder[
   })));
 }
 
-/** Заказ, оформленный вошедшим покупателем, сразу привязывается к его кабинету. */
-export async function attachOrderToCustomer(orderId: number, customerId: number) {
-return (await transaction(async () => {
-  (await legacyQuery.run<Row>("UPDATE orders SET customer_id=? WHERE id=? AND customer_id IS NULL", [customerId, orderId]));
-
-}));
-}
+/* Привязки заказа к кабинету «после создания» здесь больше нет: по ключу идемпотентности
+   можно было получить чужой заказ и забрать его себе. Владелец назначается один раз,
+   в той же транзакции, что и вставка заказа — см. createOrder в lib/checkout-db.ts. */

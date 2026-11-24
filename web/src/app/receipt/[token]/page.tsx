@@ -1,8 +1,12 @@
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { ReceiptActions } from "@/components/receipt/ReceiptActions";
-import { receiptByToken } from "@/lib/orders-db";
+import { currentCustomer } from "@/lib/customer-auth";
+import { maskReceipt, receiptByToken } from "@/lib/orders-db";
 import { qrSvg } from "@/lib/qr";
+import { cookieName } from "@/lib/staff-auth";
+import { session } from "@/lib/staff-db";
 
 type Props = { params: Promise<{ token: string }>; searchParams: Promise<{ doc?: string; print?: string }> };
 
@@ -10,13 +14,24 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Товарный чек — NAA.md", robots: { index: false, follow: false } };
 
+const when2 = (value: string) => new Intl.DateTimeFormat("ru-RU", { dateStyle: "short" }).format(new Date(value));
+
 const money = (value: number) => `${value.toLocaleString("ru-RU")} L.`;
 const when = (value: string) => new Intl.DateTimeFormat("ru-RU", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
 
 export default async function ReceiptPage({ params, searchParams }: Props) {
   const [{ token }, query] = await Promise.all([params, searchParams]);
-  const receipt = (await receiptByToken(token));
-  if (!receipt) notFound();
+  const access = (await receiptByToken(token));
+  // Просроченная и отозванная ссылка не открывается — так же, как несуществующая.
+  if (!access) notFound();
+  // Полный чек с именем, телефоном и адресом видят только сотрудник и владелец кабинета,
+  // к которому привязан заказ. Посторонний с ссылкой получает документ без этих данных.
+  const [staff, customer] = await Promise.all([
+    session((await cookies()).get(cookieName)?.value),
+    currentCustomer(),
+  ]);
+  const full = Boolean(staff) || (access.customerId !== null && customer?.id === access.customerId);
+  const receipt = full ? access.receipt : maskReceipt(access.receipt);
   const invoice = query.doc === "invoice";
   const title = invoice ? receipt.invoiceTitle : "Товарный чек";
 
@@ -43,6 +58,7 @@ export default async function ReceiptPage({ params, searchParams }: Props) {
       <section className="mt-6">
         <h2 className="text-block font-bold">Покупатель</h2>
         <p className="mt-2 text-body">{receipt.clientName} · {receipt.clientPhone}</p>
+        {!full && <p className="mt-1 text-meta text-ink-2">Имя, телефон и адрес видны в кабинете покупателя и сотруднику магазина.</p>}
         <p className="mt-1 text-body text-ink-2">Получение: {receipt.deliveryTitle}{receipt.address ? `, ${receipt.address}` : ""}</p>
         <p className="mt-1 text-body text-ink-2">Оплата: {receipt.paymentTitle}</p>
       </section>
@@ -89,6 +105,8 @@ export default async function ReceiptPage({ params, searchParams }: Props) {
       <p className="mt-4 text-meta text-ink-2">
         Это товарный чек — подтверждение покупки. {receipt.fiscalNumber ? `Номер фискального чека: ${receipt.fiscalNumber}.` : "Фискальный чек, если он нужен, оформляется отдельно по правилам ПМР."}
       </p>
+
+      {access.expiresAt && <p className="mt-4 text-meta text-ink-2">Ссылка на этот документ действует до {when2(access.expiresAt)}.</p>}
 
       <div className="mt-6"><ReceiptActions autoPrint={query.print === "1"} /></div>
       <p className="receipt-actions mt-2 text-meta text-ink-2">Второй документ: <a className="underline hover:text-accent" href={`/receipt/${token}${invoice ? "" : "?doc=invoice"}`}>{invoice ? "товарный чек" : receipt.invoiceTitle}</a></p>

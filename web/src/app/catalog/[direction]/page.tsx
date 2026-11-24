@@ -8,6 +8,7 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { getDirectionHome } from "@/data/directions.seed";
 import { getHomepage } from "@/lib/catalog-gateway";
 import { getLiveHomepage } from "@/lib/live-catalog";
+import { publicCategories } from "@/lib/reference-db";
 import { categorySlugFromPath, type SearchParamsRecord } from "@/lib/catalog-listing";
 
 type CatalogDirectionPageProps = {
@@ -29,7 +30,15 @@ export async function generateMetadata({ params }: CatalogDirectionPageProps): P
 export default async function CatalogDirectionPage({ params, searchParams }: CatalogDirectionPageProps) {
   const [{ direction: segment }, homepage, query] = await Promise.all([params, (await getLiveHomepage()), searchParams]);
   const direction = getDirectionHome(segment);
-  if (direction) return <><SiteHeader hours={homepage.hours} phone={homepage.phone} /><DirectionHome direction={direction} homepage={homepage} /><SiteFooter /></>;
+  if (direction) {
+    // Раздел справочника с тем же адресом, что и направление: его подкатегории и показываем.
+    const own = (await publicCategories()).find((category) => category.slug === direction.slug);
+    const ownCategories = own?.children.map((child) => ({
+      id: child.id, slug: child.slug, name: child.name, productCount: 0,
+      image: { alt: child.name, url: child.image }, isVisible: true,
+    })) ?? [];
+    return <><SiteHeader hours={homepage.hours} phone={homepage.phone} /><DirectionHome direction={direction} homepage={homepage} ownCategories={ownCategories} /><SiteFooter /></>;
+  }
 
   const categorySlug = categorySlugFromPath(segment);
   const category = homepage.categories.find((item) => item.slug === categorySlug);
