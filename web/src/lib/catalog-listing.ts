@@ -111,7 +111,9 @@ export function createCatalogListing(homepage: HomepageData, params: SearchParam
     .filter(() => !filters.vehicle || filters.vehicle === "mercedes-benz")
     .filter(() => !filters.model || filters.vehicle === "mercedes-benz");
   const products = withoutBrand.filter((product) => !filters.brands.length || filters.brands.includes(product.brand));
-  const brandFacets = [...new Set(withoutBrand.map((product) => product.brand))]
+  // В фильтр попадают только настоящие бренды деталей. Деталь без бренда владелец ещё
+  // не дозаполнил — пустую строку в список выбора ставить нельзя, выбрать её нечем.
+  const brandFacets = [...new Set(withoutBrand.map((product) => product.brand).filter(Boolean))]
     .map((brand) => {
       const matches = withoutBrand.filter((product) => product.brand === brand);
       const prices = matches.map((product) => product.priceMdl).filter((price): price is number => price !== null);

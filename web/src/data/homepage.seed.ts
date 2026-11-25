@@ -66,20 +66,11 @@ export const homepageSeed: HomepageData = {
     { id: "cabin-filter", sku: "A205-835-01-47", brand: "Mercedes-Benz", name: "Фильтр салона угольный", priceMdl: 540, priceMode: "fixed", rating: 4.6, reviewCount: 49, image: productImages["air-filter"] },
     { id: "ignition-kit", sku: "A004-159-81-03", brand: "Mercedes-Benz", name: "Свечи зажигания, комплект", priceMdl: 720, priceMode: "fixed", rating: 4.9, reviewCount: 312, image: productImages["spark-plugs"] },
   ],
-  recommendedProducts: [
-    { id: "recommended-strut-w213", sku: "A213-320-44-30", brand: "Mercedes-Benz", name: "Амортизационная стойка передняя", priceMdl: 3850, priceMode: "fixed", rating: 4.8, reviewCount: 64, image: { alt: "Амортизационные стойки", url: "/images/posts/suspension.png" } },
-    { id: "recommended-oil-5w30", sku: "MB-229.52-5W30", brand: "Mercedes-Benz", name: "Моторное масло 5W-30, 5 л", priceMdl: 1160, priceMode: "fixed", rating: 4.9, reviewCount: 142, image: { alt: "Моторное масло", url: "/images/posts/oil-change.png" } },
-    { id: "recommended-wheel-tire", sku: "245-45-R18", brand: "Mercedes-Benz", name: "Колесо в сборе R18", priceMdl: null, priceMode: "on_request", rating: 4.7, reviewCount: 37, image: { alt: "Автомобильное колесо", url: "/images/posts/tires.png" } },
-    { id: "recommended-brake-kit", sku: "A000-420-58-05", brand: "Mercedes-Benz", name: "Комплект тормозных дисков и колодок", priceMdl: 4620, priceMode: "fixed", rating: 4.9, reviewCount: 81, image: { alt: "Тормозной комплект", url: "/images/posts/brake-pads.png" } },
-    { id: "recommended-cabin-filter", sku: "A205-835-01-47", brand: "Mercedes-Benz", name: "Фильтр салона угольный", priceMdl: 540, priceMode: "fixed", rating: 4.6, reviewCount: 49, image: productImages["air-filter"] },
-    { id: "recommended-ignition-kit", sku: "A004-159-81-03", brand: "Mercedes-Benz", name: "Свечи зажигания, комплект", priceMdl: 720, priceMode: "fixed", rating: 4.9, reviewCount: 312, image: productImages["spark-plugs"] },
-    { id: "recommended-battery-agm", sku: "A000-982-31-08", brand: "Mercedes-Benz", name: "Аккумулятор AGM 95 Ah", priceMdl: null, priceMode: "on_request", rating: 4.7, reviewCount: 203, image: productImages.battery },
-    { id: "recommended-filter-om654", sku: "A654-180-01-09", brand: "Mercedes-Benz", name: "Масляный фильтр двигателя", priceMdl: 390, priceMode: "fixed", rating: 4.7, reviewCount: 98, image: productImages["oil-filter"] },
-    { id: "recommended-pads-w213", sku: "A000-420-91-20", brand: "Mercedes-Benz", name: "Тормозные колодки передние", priceMdl: 1490, priceMode: "fixed", rating: 4.8, reviewCount: 124, image: productImages["brake-pads"] },
-    { id: "recommended-disc-w205", sku: "A000-421-20-12", brand: "Mercedes-Benz", name: "Тормозной диск передний", priceMdl: 1680, priceMode: "fixed", rating: 4.8, reviewCount: 176, image: productImages["brake-disc"] },
-    { id: "recommended-air-filter-om654", sku: "A654-094-00-04", brand: "Mercedes-Benz", name: "Воздушный фильтр", priceMdl: 480, priceMode: "fixed", rating: 4.6, reviewCount: 87, image: productImages["air-filter"] },
-    { id: "recommended-plugs-m274", sku: "A004-159-81-03", brand: "Mercedes-Benz", name: "Комплект свечей зажигания", priceMdl: 720, priceMode: "fixed", rating: 4.9, reviewCount: 312, image: productImages["spark-plugs"] },
-  ],
+  // Рекомендованные — это выбор из тех же карточек, а не их копии.
+  // Раньше здесь лежали отдельные записи «recommended-...» с тем же артикулом и названием:
+  // в базе получалось по две строки на одну деталь, с разными остатками. Из-за этого
+  // проданная деталь оставалась «в наличии» в «Товаре недели». Теперь список — только ссылки.
+  recommendedProducts: [],
   posts: [
     { id: "oil-change", category: "Советы", title: "Как правильно менять масло в двигателе", excerpt: "Что проверить перед заменой и как не ошибиться с расходниками.", publishedAt: "2025-03-12", href: "/media/zamena-masla", image: { alt: "Замена масла в двигателе", url: "/images/posts/oil-change.png" } },
     { id: "brake-pads", category: "Обзоры", title: "Тормозные колодки: как выбрать и на что обратить внимание", excerpt: "Разбираем основные виды, признаки износа и критерии выбора.", publishedAt: "2025-03-08", href: "/media/tormoznye-kolodki", image: { alt: "Тормозной диск и колодки", url: "/images/posts/brake-pads.png" } },

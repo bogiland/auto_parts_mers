@@ -1,34 +1,98 @@
-import Image from "next/image";
 import Link from "next/link";
 
 import { ProductRail } from "@/components/product/ProductRail";
 import type { HomepageData } from "@/domain/catalog";
-import { getBrands, getGenerations, getModels, getModifications, getYears } from "@/lib/vehicles";
+import { donorsOf, showroomMake, type ShowroomMake } from "@/lib/vehicles-db";
+
+/**
+ * Подбор по машине: марка → модель → поколение → детали.
+ *
+ * Раньше здесь разворачивался модельный ряд новых машин из `data/vehicles`:
+ * годы, поколения и модификации с мощностью и приводом. Данные были только
+ * по Mercedes-Benz, у E-класса значился W213, а на разборке стоит W212 — человек
+ * доходил до конца и упирался в пустоту. Теперь шаги строятся от доноров: видно
+ * ровно те машины, детали с которых лежат на полке, и сразу сколько их.
+ */
 
 function Crumbs({ items }: { items: { href?: string; label: string }[] }) {
-  return <nav aria-label="Хлебные крошки" className="flex flex-wrap gap-2 text-meta text-ink-2"><Link href="/">Главная</Link>{items.map((item) => <span key={item.label}>/ {item.href ? <Link className="hover:text-accent" href={item.href}>{item.label}</Link> : item.label}</span>)}</nav>;
+  return <nav aria-label="Хлебные крошки" className="flex flex-wrap gap-2 text-meta text-ink-2">
+    <Link href="/">Главная</Link>
+    {items.map((item) => <span key={item.label}>/ {item.href ? <Link className="hover:text-accent" href={item.href}>{item.label}</Link> : item.label}</span>)}
+  </nav>;
 }
 
-export async function VehicleJourney({ homepage, path }: { homepage: HomepageData; path: string[] }) {
-  const [brand, model, year, generation, modification] = path;
-  const brandName = getBrands().find((item) => item.slug === brand)?.name;
-  if (!brandName) return null;
-  const models = await getModels(brand);
-  const modelItem = models.find((item) => item.slug === model);
-  const base = `/catalog/legkovye/${brand}`;
+function Stock({ parts, inStock }: { parts: number; inStock: number }) {
+  return <span className="block text-meta font-normal text-ink-2">{parts} {partsWord(parts)} · {inStock} в наличии</span>;
+}
 
-  if (!model) return <main className="container-site section-stack bg-surface-2 pb-12 pt-4"><section className="rounded-ui bg-white p-4 desktop:p-6"><Crumbs items={[{ href: base, label: brandName }, { label: "Выберите модель" }]} /><h1 className="mt-4 text-block font-bold text-ink">Выберите модель {brandName}</h1><div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-3 desktop:grid-cols-5">{models.map((item) => <Link className="rounded-ui p-3 text-body font-bold text-ink hover:bg-surface-2" href={`${base}/${item.slug}`} key={item.slug}>{item.name} ({item.generations.map((entry) => entry.code).join(", ")})</Link>)}</div></section></main>;
-  if (!modelItem) return null;
-  const years = await getYears(brand, model);
-  if (!year) return <main className="container-site section-stack bg-surface-2 pb-12 pt-4"><section className="rounded-ui bg-white p-4 desktop:p-6"><Crumbs items={[{ href: base, label: brandName }, { href: `${base}/${model}`, label: modelItem.name }, { label: "Выберите год" }]} /><h1 className="mt-4 text-block font-bold text-ink">Выберите год выпуска</h1><div className="mt-4 flex flex-wrap gap-2">{years.map((item) => <Link className="rounded-ui bg-surface-2 px-3 py-2 text-body font-bold text-ink hover:bg-accent hover:text-white" href={`${base}/${model}/${item}`} key={item}>{item}</Link>)}</div></section></main>;
-  const generations = (await getGenerations(brand, model)).filter((item) => Number(year) >= item.yearFrom && Number(year) <= (item.yearTo ?? 2026));
-  if (!generation) return <main className="container-site section-stack bg-surface-2 pb-12 pt-4"><section className="rounded-ui bg-white p-4 desktop:p-6"><Crumbs items={[{ href: base, label: brandName }, { href: `${base}/${model}`, label: modelItem.name }, { href: `${base}/${model}/${year}`, label: year }, { label: "Выберите поколение" }]} /><h1 className="mt-4 text-block font-bold text-ink">Выберите поколение</h1><div className="mt-4 grid gap-2">{generations.map((item) => <Link className="rounded-ui bg-surface-2 p-3 text-body font-bold text-ink hover:bg-accent hover:text-white" href={`${base}/${model}/${year}/${item.slug}`} key={item.slug}>{item.name} ({item.yearFrom}–{item.yearTo ?? "н.в."})</Link>)}</div></section></main>;
-  const generationItem = generations.find((item) => item.slug === generation);
-  if (!generationItem) return null;
-  const modifications = await getModifications(brand, model, generation);
-  if (!modification) return <main className="container-site section-stack bg-surface-2 pb-12 pt-4"><section className="rounded-ui bg-white p-4 desktop:p-6"><Crumbs items={[{ href: base, label: brandName }, { href: `${base}/${model}`, label: modelItem.name }, { href: `${base}/${model}/${year}`, label: year }, { href: `${base}/${model}/${year}/${generation}`, label: generationItem.name }, { label: "Выберите модификацию" }]} /><h1 className="mt-4 text-block font-bold text-ink">Выберите модификацию</h1><div className="mt-4 overflow-x-auto"><table className="w-full text-left text-body"><thead className="border-b border-line text-ink-2"><tr><th className="p-3">Модификация</th><th className="p-3">Выпуск</th><th className="p-3">Двигатель</th><th className="p-3">Л.с.</th><th className="p-3">Привод</th></tr></thead><tbody>{modifications.map((item) => <tr className="border-b border-line hover:bg-surface-2" key={item.slug}><td className="p-3"><Link className="font-bold text-ink" href={`${base}/${model}/${year}/${generation}/${item.slug}`}>{item.name}</Link></td><td className="p-3">{item.yearFrom}–{item.yearTo ?? "н.в."}</td><td className="p-3">{item.volume} · {item.fuel}</td><td className="p-3">{item.hp}</td><td className="p-3">{item.drive}</td></tr>)}</tbody></table></div></section></main>;
-  const modificationItem = modifications.find((item) => item.slug === modification);
-  if (!modificationItem) return null;
-  const groups = ["Двигатель", "Тормозная система", "Подвеска и рулевое", "Трансмиссия", "Электрооборудование", "Охлаждение и отопление", "Кузов", "Интерьер", "Выхлопная система"];
-  return <main className="container-site section-stack bg-surface-2 pb-12 pt-4"><section className="rounded-ui bg-white p-4 desktop:p-6"><Crumbs items={[{ href: base, label: brandName }, { href: `${base}/${model}`, label: modelItem.name }, { label: `${year} ${modificationItem.name}` }]} /><div className="mt-4 flex flex-col gap-4 md:flex-row"><div className="relative aspect-[16/9] w-full overflow-hidden rounded-ui md:w-1/3"><Image alt={`${brandName} ${modelItem.name}`} className="object-cover" fill sizes="(min-width:768px) 33vw, 100vw" src="/images/hero/mercedes-sedan-parts.png" /></div><div className="min-w-0 flex-1"><h1 className="text-block font-bold text-ink">{brandName} / {modelItem.name} ({generationItem.code}) / {year} / {modificationItem.name}</h1><p className="mt-3 text-body text-ink-2">{modificationItem.engine} · {modificationItem.volume} {modificationItem.fuel} · {modificationItem.hp} л.с. · {modificationItem.drive} привод · {modificationItem.body}</p><div className="mt-4 flex flex-wrap gap-2"><a className="inline-flex h-btn items-center rounded-ui border border-accent px-4 text-btn font-bold text-accent" href="#expert-request">Заявка на подбор</a><Link className="inline-flex h-btn items-center rounded-ui bg-accent px-4 text-btn font-bold text-white" href={`${base}/${model}`}>Сменить авто</Link></div></div></div></section><section className="grid gap-4 rounded-ui bg-white p-4 desktop:grid-cols-4 desktop:p-6"><aside><h2 className="text-lead font-bold text-ink">Узлы</h2><div className="mt-3 flex flex-col gap-2">{groups.map((group) => <a className="text-body text-ink-2 hover:text-accent" href={`#${group}`} key={group}>{group}</a>)}</div></aside><div className="grid gap-4 md:grid-cols-2 desktop:col-span-3 desktop:grid-cols-3">{groups.map((group) => <article id={group} key={group}><h3 className="text-body font-bold text-ink">{group}</h3><p className="mt-2 text-meta text-ink-2">Расходники · Комплектующие · Датчики · Крепёж</p><Link className="mt-3 inline-block text-body text-accent hover:underline" href={`/catalog/legkovye/tormoza?car=${brand}/${model}/${generation}/${modification}`}>Посмотреть все ›</Link></article>)}</div></section><section className="rounded-ui bg-white p-4 desktop:p-6"><ProductRail products={homepage.popularProducts} /></section></main>;
+function partsWord(count: number) {
+  const tail = count % 100 >= 11 && count % 100 <= 14 ? 0 : count % 10;
+  if (tail === 1) return "деталь";
+  if (tail >= 2 && tail <= 4) return "детали";
+  return "деталей";
+}
+
+function Shell({ children }: { children: React.ReactNode }) {
+  return <main className="container-site section-stack bg-surface-2 pb-12 pt-4">
+    <section className="rounded-ui bg-white p-4 desktop:p-6">{children}</section>
+  </main>;
+}
+
+const tile = "rounded-ui bg-surface-2 p-3 text-body font-bold text-ink hover:bg-accent hover:text-white";
+
+export async function VehicleJourney({ homepage, path }: { homepage: HomepageData; path: string[] }) {
+  const [makeSlug, modelSlug, generationSlug] = path;
+  const make: ShowroomMake | null = await showroomMake(makeSlug);
+  if (!make) return null;
+  const base = `/catalog/legkovye/${make.slug}`;
+
+  if (!modelSlug) {
+    return <Shell>
+      <Crumbs items={[{ href: base, label: make.name }, { label: "Выберите модель" }]} />
+      <h1 className="mt-4 text-block font-bold text-ink">Выберите модель {make.name}</h1>
+      <p className="mt-2 text-body text-ink-2">Показаны машины, детали с которых есть у нас на складе.</p>
+      <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-3 desktop:grid-cols-4">
+        {make.models.map((model) => <Link className={tile} href={`${base}/${model.slug}`} key={model.slug}>
+          {model.name}
+          <Stock inStock={model.inStock} parts={model.parts} />
+        </Link>)}
+      </div>
+    </Shell>;
+  }
+
+  const model = make.models.find((item) => item.slug === modelSlug);
+  if (!model) return null;
+
+  if (!generationSlug && model.generations.length > 1) {
+    return <Shell>
+      <Crumbs items={[{ href: base, label: make.name }, { href: `${base}/${model.slug}`, label: model.name }, { label: "Выберите кузов" }]} />
+      <h1 className="mt-4 text-block font-bold text-ink">Выберите кузов {make.name} {model.name}</h1>
+      <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-3 desktop:grid-cols-4">
+        {model.generations.map((generation) => <Link className={tile} href={`${base}/${model.slug}/${generation.slug}`} key={generation.slug}>
+          {generation.name}
+          <Stock inStock={generation.inStock} parts={generation.parts} />
+        </Link>)}
+      </div>
+    </Shell>;
+  }
+
+  const generation = generationSlug ? model.generations.find((item) => item.slug === generationSlug) : model.generations[0];
+  if (generationSlug && !generation) return null;
+  const donors = donorsOf(make, model.slug, generation?.slug);
+  const title = [make.name, model.name, generation?.name].filter(Boolean).join(" ");
+  const listing = `/search?donors=${encodeURIComponent(donors.join(","))}`;
+
+  return <Shell>
+    <Crumbs items={[{ href: base, label: make.name }, { href: `${base}/${model.slug}`, label: model.name }, { label: generation?.name ?? "Детали" }]} />
+    <h1 className="mt-4 text-block font-bold text-ink">Запчасти {title}</h1>
+    <p className="mt-2 text-body text-ink-2">
+      {generation ? `${generation.parts} ${partsWord(generation.parts)}, из них ${generation.inStock} в наличии.` : `${model.parts} ${partsWord(model.parts)}, из них ${model.inStock} в наличии.`}
+    </p>
+    <div className="mt-4 flex flex-wrap gap-2">
+      <Link className="inline-flex h-btn items-center rounded-ui bg-accent px-4 text-btn font-bold text-white" href={`${listing}&availability=in_stock`}>Показать то, что в наличии</Link>
+      <Link className="inline-flex h-btn items-center rounded-ui border border-accent px-4 text-btn font-bold text-accent" href={listing}>Показать все детали</Link>
+      <a className="inline-flex h-btn items-center rounded-ui border border-line px-4 text-btn font-bold text-ink" href="#expert-request">Заявка на подбор</a>
+    </div>
+    <div className="mt-6"><ProductRail products={homepage.popularProducts} /></div>
+  </Shell>;
 }

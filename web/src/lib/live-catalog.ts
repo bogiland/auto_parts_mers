@@ -48,7 +48,10 @@ function mapStoreProduct(part: PartRow, rate: number | null, summary?: { average
     sku: part.sku || part.id,
     oem: part.oem || undefined,
     name: part.nameRu,
-    brand: part.donorTitle || "NAA.md",
+    // Бренд — производитель детали. Донор уезжает в своё поле ниже: раньше он стоял
+    // здесь, и фильтр «Производитель» показывал «Mercedes-Benz E-класс W212 2013»
+    // и «NAA.md» вместо Bosch и Zimmermann.
+    brand: part.brandName,
     priceMdl: part.priceMdl,
     priceMode: part.priceMode === "on_request" ? "on_request" : "fixed",
     rating: summary?.average??0,

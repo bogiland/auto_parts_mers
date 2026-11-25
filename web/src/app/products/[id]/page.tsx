@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 
 import { SiteHeader } from "@/components/header/SiteHeader";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -8,7 +8,7 @@ import { ProductRail } from "@/components/product/ProductRail";
 import { SectionHeader } from "@/components/ui/section-header";
 import { getHomepage } from "@/lib/catalog-gateway";
 import { getLiveHomepage, toStoreProduct } from "@/lib/live-catalog";
-import { partByPublicId } from "@/lib/parts-db";
+import { partByPublicId, productRedirect } from "@/lib/parts-db";
 import { ReviewsBlock } from "@/components/reviews/ReviewsBlock";
 import { AdSlot } from "@/components/ads/AdSlot";
 import { rating } from "@/lib/reviews";
@@ -39,6 +39,10 @@ export default async function ProductPage({ params }: PageProps<"/products/[id]"
   const product = products.find((item) => item.id === id || item.sku === id) ?? (own && !own.hidden ? (await toStoreProduct(own)) : undefined);
 
   if (!product) {
+    // Старый адрес дубля ведёт на основную карточку: ссылки из переписки и поиска
+    // продолжают работать, а поисковик склеивает две страницы в одну.
+    const moved = await productRedirect(id);
+    if (moved) permanentRedirect(`/products/${moved}`);
     notFound();
   }
 

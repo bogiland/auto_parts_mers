@@ -10,7 +10,7 @@ import { getDirectionHome, sourceCategorySlug } from "@/data/directions.seed";
 import { getHomepage } from "@/lib/catalog-gateway";
 import { getLiveHomepage } from "@/lib/live-catalog";
 import { categorySlugFromPath, type SearchParamsRecord } from "@/lib/catalog-listing";
-import { getBrands, getModels } from "@/lib/vehicles";
+import { showroomMake, showroomVehicles } from "@/lib/vehicles-db";
 import { findPublicCategory } from "@/lib/reference-db";
 
 type CatalogCategoryPageProps = {
@@ -21,9 +21,13 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function generateStaticParams() {
-  const params = getBrands().map((brand) => ({ direction: "legkovye", categoryPath: [brand.slug] }));
-  const mercedesModels = await getModels("mercedes-benz");
-  return [...params, ...mercedesModels.map((model) => ({ direction: "legkovye", categoryPath: ["mercedes-benz", model.slug] }))];
+  // Адреса марок и моделей берутся из того же справочника, что и меню: только машины,
+  // детали с которых есть на складе. Пустых страниц в карте сайта не появляется.
+  const makes = await showroomVehicles();
+  return makes.flatMap((make) => [
+    { direction: "legkovye", categoryPath: [make.slug] },
+    ...make.models.map((model) => ({ direction: "legkovye", categoryPath: [make.slug, model.slug] })),
+  ]);
 }
 
 export async function generateMetadata({ params }: CatalogCategoryPageProps) {
@@ -46,13 +50,15 @@ export default async function CatalogCategoryPage({ params, searchParams }: Cata
   if (!direction) notFound();
   const homepage = await getLiveHomepage();
   const [first] = categoryPath;
-  const vehicleBrand = directionSlug === "legkovye" ? getBrands().find((item) => item.slug === first) : null;
+  const vehicleBrand = directionSlug === "legkovye" ? await showroomMake(first ?? "") : null;
   const own = (await findPublicCategory(categoryPath.at(-1) ?? ""));
   if (own?.status === "redirect") permanentRedirect(`/catalog/${directionSlug}/${own.slug}`);
 
   let content: React.ReactNode;
   if (directionSlug === "legkovye" && first === "brands") {
-    content = <main className="container-site section-stack bg-surface-2 pb-12 pt-4"><section className="rounded-ui bg-white p-4 desktop:p-6"><SectionHeader title="Все марки автомобилей" /><div className="grid grid-cols-2 gap-2 md:grid-cols-4 desktop:grid-cols-5">{getBrands().map((brand) => <Link className="rounded-ui p-3 text-body font-bold text-ink hover:bg-surface-2" href={`/catalog/legkovye/${brand.slug}`} key={brand.slug}>{brand.name}</Link>)}</div></section></main>;
+    // Марка показывается, только если у неё есть деталь: ссылок в пустоту больше нет.
+    const makes = await showroomVehicles();
+    content = <main className="container-site section-stack bg-surface-2 pb-12 pt-4"><section className="rounded-ui bg-white p-4 desktop:p-6"><SectionHeader title="Все марки автомобилей" /><p className="mt-2 text-body text-ink-2">Показаны марки, детали с которых есть у нас на складе.</p><div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4 desktop:grid-cols-5">{makes.map((make) => <Link className="rounded-ui p-3 text-body font-bold text-ink hover:bg-surface-2" href={`/catalog/legkovye/${make.slug}`} key={make.slug}>{make.name}<span className="block text-meta font-normal text-ink-2">{make.inStock} в наличии</span></Link>)}</div></section></main>;
   } else if (directionSlug === "legkovye" && first === "categories") {
     content = <main className="container-site section-stack bg-surface-2 pb-12 pt-4"><section className="rounded-ui bg-white p-4 desktop:p-6"><SectionHeader title="Все категории" /><div className="grid grid-cols-2 gap-2 md:grid-cols-4 desktop:grid-cols-6">{homepage.categories.map((category) => <Link className="rounded-ui bg-surface-2 p-3 text-body font-bold text-ink hover:text-accent" href={`/catalog/legkovye/${category.slug}`} key={category.id}>{category.name}</Link>)}</div></section></main>;
   } else if (directionSlug === "legkovye" && first === "all") {

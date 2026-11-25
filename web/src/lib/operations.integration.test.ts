@@ -13,7 +13,9 @@ let actor:{id:number;name:string;phone:string;role:'owner'};
 const product='qa-lamp';let caseId:number,orderId:number;
 let savedBotToken:string|undefined;
 beforeAll(async()=>{
- for(const line of readFileSync('.env.local','utf8').split(/\r?\n/)){const m=/^([A-Z_]+)=(.*)$/.exec(line);if(m&&!process.env[m[1]])process.env[m[1]]=m[2].replace(/^["']|["']$/g,'');}
+ // В начале .env.local стоит BOM: без его отбрасывания первая строка (DATABASE_URL) не разбиралась,
+ // и весь набор падал на входе в базу с невнятной ошибкой SASL.
+ for(const line of readFileSync('.env.local','utf8').replace(/^﻿/,'').split(/\r?\n/)){const m=/^([A-Z_]+)=(.*)$/.exec(line.trim());if(m&&!process.env[m[1]])process.env[m[1]]=m[2].replace(/^["']|["']$/g,'');}
  savedBotToken=process.env.TELEGRAM_BOT_TOKEN;delete process.env.TELEGRAM_BOT_TOKEN;
  const base=process.env.DATABASE_URL!;admin=new pg.Client({connectionString:base});await admin.connect();await admin.query(`CREATE SCHEMA ${schema}`);
  const url=new URL(base);url.searchParams.set('options',`-c search_path=${schema}`);process.env.DATABASE_URL=url.toString();

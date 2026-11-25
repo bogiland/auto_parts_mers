@@ -8,7 +8,8 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { getDirectionHome } from "@/data/directions.seed";
 import { getHomepage } from "@/lib/catalog-gateway";
 import { getLiveHomepage } from "@/lib/live-catalog";
-import { publicCategories } from "@/lib/reference-db";
+import { listBrands, publicCategories } from "@/lib/reference-db";
+import { showroomVehicles } from "@/lib/vehicles-db";
 import { categorySlugFromPath, type SearchParamsRecord } from "@/lib/catalog-listing";
 
 type CatalogDirectionPageProps = {
@@ -37,7 +38,9 @@ export default async function CatalogDirectionPage({ params, searchParams }: Cat
       id: child.id, slug: child.slug, name: child.name, productCount: 0,
       image: { alt: child.name, url: child.image }, isVisible: true,
     })) ?? [];
-    return <><SiteHeader hours={homepage.hours} phone={homepage.phone} /><DirectionHome direction={direction} homepage={homepage} ownCategories={ownCategories} /><SiteFooter /></>;
+    // Машины и бренды деталей — из общего справочника, одного для меню, каталога и подбора.
+    const [makes, partBrands] = await Promise.all([showroomVehicles(), listBrands()]);
+    return <><SiteHeader hours={homepage.hours} phone={homepage.phone} /><DirectionHome direction={direction} homepage={homepage} makes={makes} ownCategories={ownCategories} partBrands={partBrands.map(({ id, name }) => ({ id, name }))} /><SiteFooter /></>;
   }
 
   const categorySlug = categorySlugFromPath(segment);

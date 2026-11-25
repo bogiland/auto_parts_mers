@@ -1,4 +1,4 @@
-import { legacyQuery, transaction } from "@/lib/db";
+import { legacyQuery, one, transaction } from "@/lib/db";
 import "server-only";
 
 import { randomBytes } from "node:crypto";
@@ -137,7 +137,7 @@ return (await transaction(async () => {
 export type PartRow = {
   id: string; sku: string; oem: string; nameRu: string; nameRo: string; slug: string;
   priceMdl: number | null; priceMode: string; stock: number; condition: string; location: string;
-  donorId: string | null; donorTitle: string; categoryId: string | null; partTypeId: string | null;
+  donorId: string | null; donorTitle: string; brandId: string | null; brandName: string; categoryId: string | null; partTypeId: string | null;
   side: string; position: string; includes: string; applicability: string;
   photos: Photo[]; returnRestricted: boolean; hidden: boolean; soldAt: string | null; createdAt: string;
 };
@@ -148,7 +148,8 @@ function toPart(row: Row): PartRow {
     slug: String(row.slug ?? ""), priceMdl: row.price_mdl === null ? null : Number(row.price_mdl),
     priceMode: String(row.price_mode), stock: Number(row.stock), condition: String(row.condition ?? ""),
     location: String(row.location ?? ""), donorId: (row.donor_id as string | null) ?? null,
-    donorTitle: String(row.donor_title ?? ""), categoryId: (row.category_id as string | null) ?? null,
+    donorTitle: String(row.donor_title ?? ""), brandId: (row.brand_id as string | null) ?? null, brandName: String(row.brand_name ?? ""),
+    categoryId: (row.category_id as string | null) ?? null,
     partTypeId: (row.part_type_id as string | null) ?? null, side: String(row.side ?? ""), position: String(row.position ?? ""),
     includes: String(row.includes ?? ""), applicability: String(row.applicability ?? ""), photos: parsePhotos(row.photos_json),
     returnRestricted: Number(row.return_restricted) === 1, hidden: Number(row.hidden ?? 0) === 1,
@@ -156,7 +157,7 @@ function toPart(row: Row): PartRow {
   };
 }
 
-const partSelect = `SELECT p.*, (SELECT CASE WHEN d.id IS NULL THEN '' ELSE
+const partSelect = `SELECT p.*, (SELECT b.name FROM ref_brands b WHERE b.id = p.brand_id) AS brand_name, (SELECT CASE WHEN d.id IS NULL THEN '' ELSE
     trim(d.make || ' ' || d.model || ' ' || d.generation || ' ' || COALESCE(d.year::text,'')) END
   FROM donors d WHERE d.id=p.donor_id) AS donor_title FROM catalog_products p`;
 
@@ -260,6 +261,9 @@ return (await transaction(async () => {
   const categoryId = (typeof input.categoryId === "string" && input.categoryId) || type?.categoryId || null;
   const returnRestricted = type?.returnRestricted || input.returnRestricted === true || input.returnRestricted === "on" ? 1 : 0;
   const productType = type?.nameRu || text(input.productType, 80, "Вид детали");
+  // Бренд детали — производитель (Bosch, Zimmermann, Mercedes-Benz). Это не донор:
+  // донор — машина, с которой деталь снята, и он хранится отдельно в donor_id.
+  const brandId = await resolveBrand(input.brandId);
   const photos = JSON.stringify(await normalizePhotos(input.photos, 10));
 
   const id = `part-${randomBytes(8).toString("hex")}`;
@@ -270,8 +274,8 @@ return (await transaction(async () => {
   try {
     (await legacyQuery.run<Row>(`INSERT INTO catalog_products
       (id,name,name_ro,slug,sku,price_mdl,stock,price_mode,return_restricted,product_type,category_id,part_type_id,model_id,
-       donor_id,condition,location,side,position,includes,applicability,photos_json,hidden,created_at)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?)`, [id, nameRu, nameRo, slug, sku, price, stock, onRequest ? "on_request" : "fixed", returnRestricted, productType || null, categoryId, typeId || null, donor?.modelId ?? null, donorId, condition, location, side, position, includes, applicability, photos, now()]));
+       donor_id,brand_id,condition,location,side,position,includes,applicability,photos_json,hidden,created_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?)`, [id, nameRu, nameRo, slug, sku, price, stock, onRequest ? "on_request" : "fixed", returnRestricted, productType || null, categoryId, typeId || null, donor?.modelId ?? null, donorId, brandId, condition, location, side, position, includes, applicability, photos, now()]));
     // Сегодня предложение одно — свой склад. Таблица предложений позволит позже добавить поставщиков,
     // не трогая деталь: у каждого будет своя цена, остаток и срок.
     (await legacyQuery.run<Row>("INSERT INTO part_offers(id,product_id,supplier,supplier_name,price_mdl,stock,lead_days,created_at) VALUES(?,?,'own','Свой склад',?,?,0,?)", [newId("offer"), id, price, stock, now()]));
@@ -298,8 +302,10 @@ return (await transaction(async () => {
   const nameRu = text(input.nameRu, 160, "Название RU") || before.nameRu;
   const nameRo = text(input.nameRo, 160, "Название RO");
   const location = text(input.location, 60, "Место на складе");
+  // Бренд меняется только если его прислали: пустое поле в форме правки не стирает уже заведённый.
+  const brandId = input.brandId === undefined ? before.brandId : await resolveBrand(input.brandId);
   // Адрес страницы и артикул остаются прежними даже после переименования.
-  (await legacyQuery.run<Row>("UPDATE catalog_products SET name=?,name_ro=?,price_mdl=?,price_mode=?,stock=?,condition=?,location=?,includes=?,applicability=? WHERE id=?", [nameRu, nameRo, price, onRequest ? "on_request" : "fixed", stock, condition, location, text(input.includes, 300, "Что входит"), text(input.applicability, 300, "Применимость"), id]));
+  (await legacyQuery.run<Row>("UPDATE catalog_products SET name=?,name_ro=?,price_mdl=?,price_mode=?,stock=?,condition=?,location=?,includes=?,applicability=?,brand_id=? WHERE id=?", [nameRu, nameRo, price, onRequest ? "on_request" : "fixed", stock, condition, location, text(input.includes, 300, "Что входит"), text(input.applicability, 300, "Применимость"), brandId, id]));
   (await legacyQuery.run<Row>("UPDATE part_offers SET price_mdl=?,stock=? WHERE product_id=? AND supplier='own'", [price, stock, id]));
   (await audit(actor, "Правка детали", `${before.sku || id}: ${nameRu}`));
 
@@ -367,4 +373,35 @@ export async function offersOfPart(productId: string) {
     priceMdl: row.price_mdl === null ? null : Number(row.price_mdl), stock: Number(row.stock),
     leadDays: row.lead_days === null ? null : Number(row.lead_days),
   }));
+}
+
+/**
+ * Старый адрес карточки. Пары «X» и «recommended-X» появились из-за того, что
+ * рекомендованные детали лежали в наборе отдельными записями с тем же артикулом.
+ * Дубль скрыт с витрины, а его адрес ведёт на основную карточку постоянной
+ * переадресацией — старые ссылки из переписки и поиска продолжают работать.
+ */
+export async function productRedirect(oldId: string): Promise<string | null> {
+  if (!oldId) return null;
+  const row = await one<{ product_id: string }>("SELECT product_id FROM product_redirects WHERE old_id = $1", [oldId]);
+  return row ? String(row.product_id) : null;
+}
+
+/**
+ * Бренд детали по идентификатору из справочника.
+ *
+ * Бренд — производитель детали: Bosch, Zimmermann, Mercedes-Benz. Донор — машина,
+ * с которой деталь снята: он хранится отдельно, в `donor_id`. Раньше витрина
+ * показывала донора в поле «Производитель», и в фильтре вперемешку стояли
+ * «Mercedes-Benz E-класс W212 2013» и «NAA.md».
+ *
+ * Пустое значение разрешено: владелец сказал, что обязательных полей должно быть
+ * минимум, остальное дозаполняется потом. Несуществующий идентификатор — ошибка,
+ * иначе опечатка тихо обнулила бы бренд.
+ */
+async function resolveBrand(value: unknown): Promise<string | null> {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const row = await one<{ id: string }>("SELECT id FROM ref_brands WHERE id = $1", [value.trim()]);
+  if (!row) throw new Error("Бренд не найден в справочнике.");
+  return String(row.id);
 }

@@ -8,7 +8,7 @@ import type { CategoryNode, PartType, VehicleMake } from "@/lib/reference-db";
 const sides = [{ id: "left", label: "Левая" }, { id: "right", label: "Правая" }];
 const positions = [{ id: "front", label: "Передняя" }, { id: "rear", label: "Задняя" }];
 
-export function AddPartForm({ types, categories, makes, defaultOpen }: { types: PartType[]; categories: CategoryNode[]; makes: VehicleMake[]; defaultOpen: boolean }) {
+export function AddPartForm({ types, categories, makes, brands = [], defaultOpen }: { types: PartType[]; categories: CategoryNode[]; makes: VehicleMake[]; brands?: { id: string; name: string }[]; defaultOpen: boolean }) {
   const router = useRouter();
   const [typeId, setTypeId] = useState("");
   const [side, setSide] = useState("");
@@ -16,6 +16,8 @@ export function AddPartForm({ types, categories, makes, defaultOpen }: { types: 
   const [nameExtra, setNameExtra] = useState("");
   const [manualName, setManualName] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  // Бренд детали — производитель, а не машина-донор: это разные поля.
+  const [brandId, setBrandId] = useState("");
   const [modelId, setModelId] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("1");
@@ -40,7 +42,7 @@ export function AddPartForm({ types, categories, makes, defaultOpen }: { types: 
     try {
       const response = await fetch("/api/staff/action", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "add-product", partTypeId: typeId || undefined, name: type ? undefined : manualName.trim(), nameExtra, side, position, categoryId: place, modelId, price: Number(price), stock: Number(stock), returnRestricted: restricted }),
+        body: JSON.stringify({ action: "add-product", partTypeId: typeId || undefined, name: type ? undefined : manualName.trim(), nameExtra, side, position, categoryId: place, brandId: brandId || undefined, modelId, price: Number(price), stock: Number(stock), returnRestricted: restricted }),
       });
       if (!response.ok) throw new Error(((await response.json().catch(() => ({}))) as { message?: string }).message ?? "Не удалось сохранить");
       setDone(`Деталь «${preview}» добавлена${place ? ` в категорию «${categories.find((node) => node.id === place)?.nameRu ?? ""}»` : " без категории"}.`);
@@ -64,6 +66,13 @@ export function AddPartForm({ types, categories, makes, defaultOpen }: { types: 
       {type?.hasSide && <label className="admin-field">Сторона<select onChange={(event) => setSide(event.target.value)} required value={side}><option value="">Выберите</option>{sides.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>}
       {type?.hasPosition && <label className="admin-field">Положение<select onChange={(event) => setPosition(event.target.value)} required value={position}><option value="">Выберите</option>{positions.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>}
       {type && <label className="admin-field">Уточнение к названию<input onChange={(event) => setNameExtra(event.target.value)} placeholder="например, в сборе" value={nameExtra} /></label>}
+      <label className="admin-field">Бренд детали
+        <select onChange={(event) => setBrandId(event.target.value)} value={brandId}>
+          <option value="">Не указан</option>
+          {brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
+        </select>
+        <span className="admin-note">Производитель детали: Bosch, Zimmermann, Mercedes-Benz. Машина, с которой деталь снята, указывается донором.</span>
+      </label>
       <label className="admin-field">Категория каталога
         <select onChange={(event) => setCategoryId(event.target.value)} value={place}>
           <option value="">Без категории</option>
