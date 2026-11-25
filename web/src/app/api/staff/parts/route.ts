@@ -1,3 +1,4 @@
+import { bodyFailure, bodyLimits, humanOrFallback, readJson } from "@/lib/http";
 import { cookies } from "next/headers";
 import { cookieName, sameOrigin } from "@/lib/staff-auth";
 import { session } from "@/lib/staff-db";
@@ -10,7 +11,7 @@ export async function POST(request: Request) {
   if (!sameOrigin(request)) return new Response(null, { status: 403 });
   const actor = (await session((await cookies()).get(cookieName)?.value));
   if (!actor) return new Response(null, { status: 401 });
-  const body = await request.json().catch(() => null);
+  const body = await readJson(request, bodyLimits.gallery).catch(() => null);
   if (!body || typeof body !== "object") return new Response(null, { status: 400 });
   const json = (data: unknown) => Response.json(data, { headers: { "Cache-Control": "no-store" } });
   try {
@@ -29,6 +30,6 @@ export async function POST(request: Request) {
     }
     return json({ ok: true });
   } catch (error) {
-    return Response.json({ message: error instanceof Error ? error.message : "Не удалось сохранить" }, { status: 400 });
+    return Response.json({ message: humanOrFallback(error, "Не удалось сохранить") }, { status: 400 });
   }
 }

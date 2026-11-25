@@ -324,10 +324,10 @@ export async function setIssuePhotos(actor: Staff, id: number, photos: unknown, 
 return (await transaction(async () => {
   (await lockedRow(id, version));
   if (!Array.isArray(photos) || photos.length > 6) throw new Error("Можно приложить до 6 фото.");
-  const stored = photos.map((item) => {
+  const stored = (await Promise.all(photos.map(async (item) => {
     const photo = typeof item === "string" ? { src: item, closeup: false } : (item as Photo);
-    return { src: savePrivateImage(String(photo?.src ?? ""), 900_000), closeup: Boolean(photo?.closeup) };
-  }).filter((photo) => photo.src);
+    return { src: await savePrivateImage(String(photo?.src ?? ""), 900_000), closeup: Boolean(photo?.closeup) };
+  }))).filter((photo) => photo.src);
   (await legacyQuery.run<Row>("UPDATE orders SET issue_photos_json=?, version=version+1 WHERE id=?", [JSON.stringify(stored), id]));
   (await audit(actor, "Фото при выдаче", `№ ${id + 1000}: ${stored.length} фото`));
   return stored;
@@ -459,10 +459,10 @@ return (await transaction(async () => {
   const amount = Number(input.amountMdl ?? 0);
   if (!Number.isSafeInteger(amount) || amount < 0 || amount > item.unitPriceMdl * item.quantity) throw new Error("Сумма возврата не может превышать стоимость детали в заказе.");
   if (decision === "refused" && amount !== 0) throw new Error("При отказе сумма возврата — ноль.");
-  const photos = Array.isArray(input.photos) ? input.photos.slice(0, 6).map((raw) => {
+  const photos = Array.isArray(input.photos) ? (await Promise.all(input.photos.slice(0, 6).map(async (raw) => {
     const photo = typeof raw === "string" ? { src: raw, closeup: false } : (raw as Photo);
-    return { src: savePrivateImage(String(photo?.src ?? ""), 900_000), closeup: Boolean(photo?.closeup) };
-  }).filter((photo) => photo.src) : [];
+    return { src: await savePrivateImage(String(photo?.src ?? ""), 900_000), closeup: Boolean(photo?.closeup) };
+  }))).filter((photo) => photo.src) : [];
   (await legacyQuery.run<Row>("INSERT INTO order_returns(order_id,product_id,product_name,inspection,photos_json,decision,amount_mdl,reason,actor_name,at) VALUES(?,?,?,?,?,?,?,?,?,?)", [orderId, productId, item.name, (typeof input.inspection === "string" ? input.inspection.trim() : "").slice(0, 1000), JSON.stringify(photos), decision, amount, reason, actor.name, now()]));
   (await audit(actor, "Решение по возврату", `№ ${order.number}: ${item.name} — ${returnDecisions.find((option) => option.id === decision)?.label}, ${amount} L.`));
 

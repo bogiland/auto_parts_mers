@@ -18,9 +18,10 @@ const globals = globalThis as Globals;
 function connectionString() {
   const value = process.env.DATABASE_URL;
   if (!value) {
+    // Строка подключения с паролем в тексте ошибки попадает в журнал и в вывод сборки,
+    // поэтому здесь только имя переменной и команда, которая её заполняет.
     throw new Error(
-      "Не задан DATABASE_URL. Для разработки: postgres://naa:naa_local_dev@localhost:5432/naa — " +
-      "поднимите базу командой npm run db:up. Для боевого сервера подставьте строку подключения Supabase.",
+      "Не задан DATABASE_URL. Скопируйте .env.example в .env.local и поднимите базу: npm run db:up.",
     );
   }
   return value;

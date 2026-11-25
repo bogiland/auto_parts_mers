@@ -79,7 +79,7 @@ return (await transaction(async () => {
   const bodyRu = text(input.bodyRu, 20_000);
   const bodyRo = text(input.bodyRo, 20_000);
   const placement = placements.some((item) => item.id === input.placement) ? String(input.placement) : "none";
-  const image = saveImage(typeof input.image === "string" ? input.image : "");
+  const image = await saveImage(typeof input.image === "string" ? input.image : "");
   const inHeader = input.inHeader === true || input.inHeader === "on" ? 1 : 0;
   const showContacts = input.showContacts === true || input.showContacts === "on" ? 1 : 0;
   const visible = input.visible === false || input.visible === "off" ? 0 : 1;

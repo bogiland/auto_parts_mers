@@ -379,3 +379,56 @@ CREATE TABLE IF NOT EXISTS site_pages (
   created_at text NOT NULL
 );
 CREATE INDEX IF NOT EXISTS site_pages_order ON site_pages (sort_order);
+
+/* ---------- П2: общий счётчик обращений ---------- */
+
+/* Пределы на формы хранятся в базе, а не в памяти процесса: при нескольких
+   рабочих процессах память у каждого своя и общий предел не соблюдается. */
+CREATE TABLE IF NOT EXISTS rate_hits (
+  bucket text NOT NULL,
+  key text NOT NULL,
+  at bigint NOT NULL
+);
+CREATE INDEX IF NOT EXISTS rate_hits_lookup ON rate_hits (bucket, key, at);
+CREATE INDEX IF NOT EXISTS rate_hits_at ON rate_hits (at);
+
+/* Подтверждение паролем перед сменой ролей и выгрузкой: одноразовые отметки. */
+CREATE TABLE IF NOT EXISTS staff_confirmations (
+  id bigserial PRIMARY KEY,
+  user_id integer NOT NULL,
+  scope text NOT NULL,
+  at bigint NOT NULL
+);
+CREATE INDEX IF NOT EXISTS staff_confirmations_lookup ON staff_confirmations (user_id, scope, at);
+
+/* ---------- П3: бренд детали отдельно от донора ---------- */
+
+/* Производитель детали (Bosch, Zimmermann, Mercedes-Benz) — не то же самое,
+   что машина-донор, с которой её сняли. Старые записи остаются с NULL. */
+ALTER TABLE catalog_products ADD COLUMN IF NOT EXISTS brand_id text;
+CREATE INDEX IF NOT EXISTS catalog_products_brand ON catalog_products (brand_id);
+
+/* Старые адреса карточек: /products/recommended-x ведёт на основную карточку. */
+CREATE TABLE IF NOT EXISTS product_redirects (
+  old_id text PRIMARY KEY,
+  product_id text NOT NULL,
+  created_at text NOT NULL
+);
+
+/* ---------- П2: журнал только добавляется ---------- */
+
+/* Запись в журнале — доказательство того, кто и что сделал. Приложение её только
+   вставляет, но «только по договорённости» — не защита: достаточно одной ошибки
+   в новом коде или одного UPDATE из консоли. Правка и удаление запрещены на
+   уровне самой базы. Снять запрет можно только осознанно, удалив триггер. */
+CREATE OR REPLACE FUNCTION staff_audit_append_only() RETURNS trigger
+  LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'Журнал только добавляется: операция % запрещена', TG_OP;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS staff_audit_no_change ON staff_audit;
+CREATE TRIGGER staff_audit_no_change
+  BEFORE UPDATE OR DELETE OR TRUNCATE ON staff_audit
+  FOR EACH STATEMENT EXECUTE FUNCTION staff_audit_append_only();

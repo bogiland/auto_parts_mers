@@ -3,6 +3,7 @@ web/node_modules/
 web/.next/
 web/coverage/
 web/.env*
+!web/.env.example
 web/.vercel/
 api/**/bin/
 api/**/obj/
@@ -17,3 +18,4 @@ backups/
 
 # Приватные файлы (фото выдачи и осмотра)
 web/private-uploads/
+/package-lock.json

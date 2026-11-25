@@ -4,12 +4,15 @@ import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypt
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { ensureSeeded, getSettings } from "@/lib/checkout-db";
 import { inTx, many, one, run, tx } from "@/lib/db";
+import { allow, windows } from "@/lib/rate-limit";
 
 export type Role = "owner" | "operator";
 export type Staff = { id: number; phone: string; role: Role; name: string };
 type Row = Record<string, unknown>;
 
 const idleMs = 2 * 60 * 60 * 1000;
+/** Бездействие владельца обрывает сессию быстрее: его доступом меняют права и выгружают заказы. */
+const ownerIdleMs = 30 * 60 * 1000;
 
 export function normalizePhone(value: string) { return value.replace(/[\s()\-]/g, ""); }
 
@@ -68,21 +71,22 @@ export async function audit(actor: Staff | null, action: string, details = "") {
     [actor?.id ?? null, actor?.name ?? "Система", action, details, new Date().toISOString()]);
 }
 
-export async function login(phoneInput: string, password: string): Promise<{ staff: Staff; token: string } | null> {
+/**
+ * Вход сотрудника.
+ *
+ * Пределы раздельные: по номеру и по адресу обращения. Прежний общий предел
+ * «30 попыток в минуту на всех» означал, что один бот, перебирающий пароли,
+ * выбирал его целиком — и операторы переставали входить до конца минуты.
+ * Теперь перебор упирается в свой адрес и в свой номер, а чужой вход не трогает.
+ */
+export async function login(phoneInput: string, password: string, ip = "local"): Promise<{ staff: Staff; token: string } | null> {
   await ensureSeeded();
   const candidates = phoneVariants(phoneInput);
   const phone = candidates[0] ?? "";
   const now = Date.now();
 
-  const allowed = await tx(async (client) => {
-    await inTx.run(client, "DELETE FROM login_attempts WHERE at < $1", [now - 60_000]);
-    const mine = await inTx.one<{ count: string }>(client, "SELECT COUNT(*) AS count FROM login_attempts WHERE phone = $1", [phone]);
-    const all = await inTx.one<{ count: string }>(client, "SELECT COUNT(*) AS count FROM login_attempts");
-    if (Number(mine?.count ?? 0) >= 5 || Number(all?.count ?? 0) >= 30) return false;
-    await inTx.run(client, "INSERT INTO login_attempts (phone, at) VALUES ($1,$2)", [phone, now]);
-    return true;
-  });
-  if (!allowed) return null;
+  if (!(await allow("staff-login:ip", ip, windows.staffLoginIp, now))) return null;
+  if (!(await allow("staff-login:phone", phone, windows.staffLoginPhone, now))) return null;
 
   // У доступа, выданного покупателю, своего пароля нет: сверяем с паролем его кабинета,
   // чтобы человеку не приходилось помнить два разных.
@@ -115,7 +119,9 @@ export async function session(token: string | undefined): Promise<Staff | null> 
     [hash],
   );
   if (!row) return null;
-  if (now - Number(row.last_seen) >= idleMs) {
+  // Привилегированная сессия обрывается быстрее: доступом владельца меняют права и выгружают данные.
+  const limit = String(row.role) === "owner" ? ownerIdleMs : idleMs;
+  if (now - Number(row.last_seen) >= limit) {
     await run("UPDATE staff_sessions SET revoked = 1 WHERE token_hash = $1", [hash]);
     return null;
   }
@@ -390,3 +396,46 @@ export function maskPhone(phone: string) {
   const match = /^(\+373)(\d{2})\d+(\d{2})$/.exec(phone);
   return match ? `${match[1]} ${match[2]} ***${match[3]}` : phone.length > 5 ? `${phone.slice(0, 4)} ***${phone.slice(-2)}` : "***";
 }
+
+/* ---------- Повторный ввод пароля перед опасным действием ---------- */
+
+/**
+ * Смена ролей и выгрузка заказов с телефонами — действия, которые нельзя
+ * отменить одним щелчком. Живая кука для них больше не считается достаточной:
+ * у отошедшего от стола владельца ею воспользуется любой, кто сядет за его машину.
+ * Поэтому перед такими действиями пароль вводится заново, и отметка живёт недолго.
+ */
+export const confirmTtlMs = 5 * 60 * 1000;
+
+/** Проверяет пароль сотрудника. У доступа, выданного покупателю, пароль берётся из кабинета. */
+export async function checkOwnPassword(staff: Staff, password: string, ip = "local"): Promise<boolean> {
+  if (typeof password !== "string" || !password || password.length > 200) return false;
+  if (!(await allow("confirm:ip", ip, windows.confirmIp))) return false;
+  const row = await one(
+    `SELECT u.password_hash, c.password_hash AS customer_hash FROM staff_users u
+     LEFT JOIN customers c ON c.id = u.customer_id AND c.active = 1
+     WHERE u.id = $1 AND u.active = 1`,
+    [staff.id],
+  );
+  const stored = row?.customer_hash ?? row?.password_hash;
+  return verifyPassword(password, String(stored ?? dummyHash)) && Boolean(row);
+}
+
+/** Записывает подтверждение. Отметка одноразовая по сроку, не по числу действий. */
+export async function recordConfirmation(staff: Staff, scope: string) {
+  await run("DELETE FROM staff_confirmations WHERE user_id = $1 AND scope = $2", [staff.id, scope]);
+  await run("INSERT INTO staff_confirmations (user_id, scope, at) VALUES ($1,$2,$3)", [staff.id, scope, Date.now()]);
+  await audit(staff, "Подтверждение паролем", scope);
+}
+
+/** Есть ли свежее подтверждение для этого действия. */
+export async function hasConfirmation(staff: Staff, scope: string): Promise<boolean> {
+  const row = await one<{ at: string }>(
+    "SELECT at FROM staff_confirmations WHERE user_id = $1 AND scope = $2 ORDER BY at DESC LIMIT 1",
+    [staff.id, scope],
+  );
+  return Boolean(row) && Date.now() - Number(row?.at ?? 0) < confirmTtlMs;
+}
+
+/** Действия, перед которыми пароль вводится заново. */
+export const confirmedActions = new Set(["role", "add-user", "delete-user", "grant-staff", "export"]);

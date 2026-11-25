@@ -15,11 +15,11 @@ NAA.md — сайт каталога и приёма заказов автоза
 ## 2. Где проект и как запускать
 
 - Локальная папка: `D:\NAA\auto_parts_mers-main\web`.
-- Стек: Next.js 16.3.5 (App Router), React 19.2.8, TypeScript, Tailwind CSS 4, Node.js с `node:sqlite`, SQLite-файл `web/data/orders.sqlite`, Playwright для проверок.
+- Стек: Next.js 16.3.5 (App Router), React 19.2.8, TypeScript, Tailwind CSS 4, PostgreSQL 17 (`pg`), Playwright для проверок.
 - В PowerShell: `cd D:\NAA\auto_parts_mers-main\web`, затем `npm run dev`. Открыть `http://localhost:3000` и `http://localhost:3000/admin/login`.
 - Зависимости в этой локальной папке установлены (`node_modules` есть). В новом окружении потребуется `npm install`.
 - Проверки: `npm run lint`, `npx tsc --noEmit`, `node qa/aggregate-checkout-smoke.mjs`, `node qa/admin-shell-smoke.mjs`. Общее `npm run qa` и другие smoke-сценарии есть в `qa/`.
-- Папка извлечена из ZIP, в `auto_parts_mers-main` и `web` **нет `.git`**. Последующие локальные изменения не отправлены на GitHub. Не утверждать, что GitHub содержит описанную ниже версию; перед заменой папки сделать резервную копию кода и `data/orders.sqlite`.
+- Репозиторий git есть, origin — github.com/bogiland/auto_parts_mers. Перед заменой папки делать резервную копию кода и дамп базы (`npm run db:up` + `pg_dump`).
 - Сейчас в БД нет активного Owner и Operator. Для входа создать владельца командой `npm run staff:create-owner` внутри `web`; сценарий интерактивно спросит имя, телефон и пароль. Не использовать номера тестовых сотрудников из QA как рабочие учётные записи.
 - Production-сборка `npm run build` в этой среде завершалась `EPERM` при создании внутренних папок `.next`, в том числе при попытке использовать отдельный каталог сборки. ESLint, TypeScript, локальные страницы и ключевые smoke-проверки проходили. Причина `EPERM` не устранена: не заявлять, что production-сборка проверена.
 

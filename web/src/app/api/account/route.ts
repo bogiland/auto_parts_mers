@@ -4,14 +4,19 @@ import {
   AccountError, changePassword, customerBySession, deleteAddress, listAddresses, loginCustomer,
   logoutCustomer, registerCustomer, saveAddress, setDefaultAddress, updateProfile,
 } from "@/lib/customer-db";
-import { sameOrigin } from "@/lib/staff-auth";
+import { BodyTooLarge, bodyLimits, clientIp, logFailure, readJson, sameOriginRequest } from "@/lib/http";
+import { allow, tooMany, windows } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  if (!sameOrigin(request)) return new Response(null, { status: 403 });
-  const body = await request.json().catch(() => null);
-  if (!body || typeof body !== "object") return new Response(null, { status: 400 });
+  if (!sameOriginRequest(request)) return new Response(null, { status: 403 });
+  let body: Record<string, unknown>;
+  try { body = await readJson(request, bodyLimits.form); }
+  catch (error) {
+    if (error instanceof BodyTooLarge) return new Response(null, { status: 413 });
+    return new Response(null, { status: 400 });
+  }
   const jar = await cookies();
   const token = jar.get(customerCookie)?.value;
   const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "no-store" } });
@@ -23,6 +28,9 @@ export async function POST(request: Request) {
       return json({ ok: true, customer });
     }
     if (body.action === "login") {
+      // Предел по логину уже внутри loginCustomer; здесь — предел по адресу,
+      // иначе бот со списком чужих почт обходит счётчик, оставаясь в пределах по каждой.
+      if (!(await allow("customer-login:ip", clientIp(request), windows.customerLoginIp))) return tooMany();
       const result = (await loginCustomer(String(body.login ?? ""), String(body.password ?? "")));
       // Один и тот же ответ на неизвестную почту и на неверный пароль: так не узнать, кто у нас есть.
       if (!result) return json({ field: "password", message: "Неверная почта, телефон или пароль." }, 401);
@@ -52,7 +60,8 @@ export async function POST(request: Request) {
     }
   } catch (error) {
     if (error instanceof AccountError) return json({ field: error.field, message: error.message }, 400);
-    console.error("Account request failed", error);
-    return json({ message: "Не удалось выполнить. Попробуйте снова." }, 500);
+    // В журнал не попадают ни логин, ни телефон, ни токен сессии: только вид действия и код.
+    const reference = logFailure("Кабинет покупателя", error, { action: body.action });
+    return json({ message: "Не удалось выполнить. Попробуйте снова.", reference }, 500);
   }
 }

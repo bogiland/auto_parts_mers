@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { ensureSeeded } from "@/lib/checkout-db";
+import { encodeImage } from "@/lib/images";
 import { audit, type Staff } from "@/lib/staff-db";
 import { inTx, many, one, run, tx } from "@/lib/db";
 
@@ -89,7 +90,7 @@ export async function saveCategory(actor: Staff, input: Record<string, unknown>)
   const intro = text(input.intro, 600, "Текст для страницы");
   const seoTitle = text(input.seoTitle, 160, "Заголовок для поиска");
   const seoDescription = text(input.seoDescription, 320, "Описание для поиска");
-  const image = typeof input.image === "string" ? saveImage(input.image) : "";
+  const image = typeof input.image === "string" ? await saveImage(input.image) : "";
   // Галочки нет в запросе — значит её никто не снимал: новая категория показывается на сайте сразу.
   const visible = input.visible === undefined ? 1 : flag(input.visible);
   const parentId = typeof input.parentId === "string" && input.parentId ? input.parentId : null;
@@ -272,7 +273,7 @@ export async function vehicleTree(): Promise<VehicleMake[]> {
 export async function saveMake(actor: Staff, input: Record<string, unknown>) {
   const id = typeof input.id === "string" && input.id ? input.id : null;
   const name = text(input.name, 60, "Марка", true);
-  const logo = typeof input.logo === "string" ? saveImage(input.logo) : "";
+  const logo = typeof input.logo === "string" ? await saveImage(input.logo) : "";
   if (id) {
     const existing = await one("SELECT logo FROM ref_makes WHERE id = $1", [id]);
     if (!existing) throw new Error("Марка не найдена.");
@@ -369,7 +370,7 @@ export async function saveBrand(actor: Staff, input: Record<string, unknown>) {
   const id = typeof input.id === "string" && input.id ? input.id : null;
   const name = text(input.name, 60, "Название бренда", true);
   const description = text(input.description, 300, "Описание");
-  const logo = typeof input.logo === "string" ? saveImage(input.logo) : "";
+  const logo = typeof input.logo === "string" ? await saveImage(input.logo) : "";
   if (id) {
     const existing = await one("SELECT logo FROM ref_brands WHERE id = $1", [id]);
     if (!existing) throw new Error("Бренд не найден.");
@@ -394,23 +395,16 @@ export async function deleteBrand(actor: Staff, id: string) {
 
 /* ---------- Файлы изображений ---------- */
 
-/** Разбор и проверка картинки общая для публичного и закрытого хранилища. */
-function decodeImage(value: string, maxBytes: number) {
-  const match = /^data:image\/(webp|jpeg|png);base64,([A-Za-z0-9+/=]+)$/.exec(value);
-  if (!match) throw new Error("Неверный формат картинки.");
-  const bytes = Buffer.from(match[2], "base64");
-  if (bytes.length < 12) throw new Error("Файл картинки повреждён.");
-  if (bytes.length > maxBytes) throw new Error(`Картинка тяжелее ${Math.round(maxBytes / 1000)} КБ после сжатия.`);
-  const signature = bytes.toString("hex", 0, 4);
-  const webp = signature === "52494646" && bytes.toString("ascii", 8, 12) === "WEBP";
-  if (!(webp || signature.startsWith("ffd8ff") || signature === "89504e47")) throw new Error("Неверный формат картинки.");
-  return { bytes, filename: `${randomBytes(16).toString("hex")}.${match[1] === "jpeg" ? "jpg" : match[1]}` };
-}
-
-export function saveImage(value: string, maxBytes = 600_000): string {
+/**
+ * Картинка полностью разбирается и записывается заново в WebP (см. `lib/images`):
+ * переименованный исполняемый файл не разберётся, огромный холст отклоняется
+ * по числу точек, EXIF с координатами съёмки в новый файл не переносится.
+ */
+export async function saveImage(value: string, maxBytes = 600_000): Promise<string> {
   if (!value) return "";
   if (value.startsWith("/uploads/")) return value;
-  const { bytes, filename } = decodeImage(value, maxBytes);
+  const { bytes, extension } = await encodeImage(value, maxBytes);
+  const filename = `${randomBytes(16).toString("hex")}.${extension}`;
   const directory = path.join(process.cwd(), "public", "uploads");
   mkdirSync(directory, { recursive: true });
   writeFileSync(path.join(directory, filename), bytes, { flag: "wx" });
@@ -425,10 +419,11 @@ export const privateUploadDir = path.join(process.cwd(), "private-uploads");
  * на фоне. В public/uploads такой файл открывается по прямой ссылке кому угодно,
  * поэтому он пишется рядом, но вне public, и отдаётся только через маршрут с проверкой прав.
  */
-export function savePrivateImage(value: string, maxBytes = 900_000): string {
+export async function savePrivateImage(value: string, maxBytes = 900_000): Promise<string> {
   if (!value) return "";
   if (value.startsWith("/api/staff/issue-photo/") || value.startsWith("/uploads/")) return value;
-  const { bytes, filename } = decodeImage(value, maxBytes);
+  const { bytes, extension } = await encodeImage(value, maxBytes);
+  const filename = `${randomBytes(16).toString("hex")}.${extension}`;
   const directory = path.join(privateUploadDir, "issue");
   mkdirSync(directory, { recursive: true });
   writeFileSync(path.join(directory, filename), bytes, { flag: "wx" });

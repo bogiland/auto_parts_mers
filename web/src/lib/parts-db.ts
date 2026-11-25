@@ -85,7 +85,7 @@ return (await transaction(async () => {
   const mileage = integer(input.mileage, "Пробег", 0, 2_000_000);
   const visible = input.visible === false || input.visible === "off" ? 0 : 1;
   const reference = (value: unknown) => (typeof value === "string" && value ? value : null);
-  const photos = JSON.stringify(normalizePhotos(input.photos, 8));
+  const photos = JSON.stringify(await normalizePhotos(input.photos, 8));
   const fields = [reference(input.makeId), reference(input.modelId), reference(input.generationId), make, model, generation, year, engine, mileage, note, photos, visible] as (string | number | null)[];
   if (id) {
     const result = (await legacyQuery.run<Row>("UPDATE donors SET make_id=?,model_id=?,generation_id=?,make=?,model=?,generation=?,year=?,engine=?,mileage=?,note=?,photos_json=?,visible=? WHERE id=?", [...fields, id]));
@@ -103,24 +103,27 @@ return (await transaction(async () => {
 
 /* ---------- Фото ---------- */
 
-// Обрезка и сжатие идут в браузере, поэтому EXIF до сервера не доходит, а оригинал нигде не хранится.
-// Сервер принимает готовые куски: крупный план до 3000 px, обычный кадр до 2000 px и превью 400 px.
-function normalizePhotos(value: unknown, limit: number): Photo[] {
+// Обрезка и сжатие идут в браузере, но полагаться на это нельзя: запрос отправляют и в обход
+// страницы. Поэтому сервер разбирает каждый кадр заново и пишет свой WebP (`lib/images`) —
+// так отсекаются переименованные файлы и холсты-«бомбы», а EXIF с координатами не сохраняется.
+async function normalizePhotos(value: unknown, limit: number): Promise<Photo[]> {
   if (value === undefined || value === null) return [];
   if (!Array.isArray(value)) throw new Error("Неверный список фото.");
   if (value.length > limit) throw new Error(`Можно загрузить до ${limit} фото.`);
-  return value.map((item) => {
+  const stored: Photo[] = [];
+  for (const item of value) {
     const photo = typeof item === "string" ? { src: item, closeup: false, preview: "" } : (item as Photo);
     const closeup = Boolean(photo?.closeup);
-    const src = saveImage(String(photo?.src ?? ""), closeup ? 1_600_000 : 900_000);
+    const src = await saveImage(String(photo?.src ?? ""), closeup ? 1_600_000 : 900_000);
     if (!src) throw new Error("Одно из фото пустое.");
-    return { src, closeup, preview: photo?.preview ? saveImage(String(photo.preview), 120_000) : "" };
-  });
+    stored.push({ src, closeup, preview: photo?.preview ? await saveImage(String(photo.preview), 120_000) : "" });
+  }
+  return stored;
 }
 
 export async function setPartPhotos(actor: Staff, id: string, value: unknown) {
 return (await transaction(async () => {
-  const photos = normalizePhotos(value, 10);
+  const photos = await normalizePhotos(value, 10);
   const result = (await legacyQuery.run<Row>("UPDATE catalog_products SET photos_json=? WHERE id=?", [JSON.stringify(photos), id]));
   if (!result.changes) throw new Error("Деталь не найдена.");
   (await audit(actor, "Фото детали", `${id}: ${photos.length} фото`));
@@ -257,7 +260,7 @@ return (await transaction(async () => {
   const categoryId = (typeof input.categoryId === "string" && input.categoryId) || type?.categoryId || null;
   const returnRestricted = type?.returnRestricted || input.returnRestricted === true || input.returnRestricted === "on" ? 1 : 0;
   const productType = type?.nameRu || text(input.productType, 80, "Вид детали");
-  const photos = JSON.stringify(normalizePhotos(input.photos, 10));
+  const photos = JSON.stringify(await normalizePhotos(input.photos, 10));
 
   const id = `part-${randomBytes(8).toString("hex")}`;
   const sku = (await nextSku());

@@ -1,7 +1,13 @@
+import { bodyFailure, bodyLimits, humanOrFallback, readJson } from "@/lib/http";
 import { cookies } from "next/headers";
 import { cookieName, sameOrigin } from "@/lib/staff-auth";
 import { session } from "@/lib/staff-db";
 import { deleteBrand, deleteCategory, deletePartType, deleteVehicle, moveCategory, saveBrand, saveCategory, saveGeneration, saveMake, saveModel, savePartType } from "@/lib/reference-db";
+
+// Проверки с предикатом: после них тип значения известен и приведения не нужны.
+const isIndex = (value: unknown): value is number => Number.isSafeInteger(value) && Number(value) >= 0;
+type VehicleLevel = "make" | "model" | "generation";
+const isLevel = (value: unknown): value is VehicleLevel => value === "make" || value === "model" || value === "generation";
 
 export const runtime = "nodejs";
 
@@ -10,14 +16,14 @@ export async function POST(request: Request) {
   const actor = (await session((await cookies()).get(cookieName)?.value));
   if (!actor) return new Response(null, { status: 401 });
   if (actor.role !== "owner") return new Response(null, { status: 403 });
-  const body = await request.json().catch(() => null);
+  const body = await readJson(request, bodyLimits.gallery).catch(() => null);
   if (!body || typeof body !== "object" || typeof body.action !== "string") return new Response(null, { status: 400 });
   const id = typeof body.id === "string" ? body.id : "";
   try {
     switch (body.action) {
       case "save-category": return Response.json({ ok: true, id: (await saveCategory(actor, body)) }, { headers: { "Cache-Control": "no-store" } });
       case "move-category": {
-        if (!id || !Number.isSafeInteger(body.index) || body.index < 0) return new Response(null, { status: 400 });
+        if (!id || !isIndex(body.index)) return new Response(null, { status: 400 });
         (await moveCategory(actor, id, typeof body.parentId === "string" && body.parentId ? body.parentId : null, body.index));
         break;
       }
@@ -32,7 +38,7 @@ export async function POST(request: Request) {
       case "save-model": return Response.json({ ok: true, id: (await saveModel(actor, body)) }, { headers: { "Cache-Control": "no-store" } });
       case "save-generation": return Response.json({ ok: true, id: (await saveGeneration(actor, body)) }, { headers: { "Cache-Control": "no-store" } });
       case "delete-vehicle": {
-        if (!id || !["make", "model", "generation"].includes(body.level)) return new Response(null, { status: 400 });
+        if (!id || !isLevel(body.level)) return new Response(null, { status: 400 });
         (await deleteVehicle(actor, body.level, id));
         break;
       }
@@ -42,6 +48,6 @@ export async function POST(request: Request) {
     }
     return Response.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    return Response.json({ message: error instanceof Error ? error.message : "Не удалось сохранить" }, { status: 400 });
+    return Response.json({ message: humanOrFallback(error, "Не удалось сохранить") }, { status: 400 });
   }
 }

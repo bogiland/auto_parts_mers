@@ -11,9 +11,17 @@ async function search(request: Request) {
   const q = new URL(request.url).searchParams.get("q")?.trim().toLowerCase() ?? "";
   if (q.length < 2 || q.length > 80) return Response.json({ results: [] });
   const skuById = new Map([...homepageSeed.popularProducts, ...homepageSeed.recommendedProducts].map((product) => [product.id, product.sku]));
+  // Заявки собираются заранее: раньше здесь был flatMap с async-функцией, и в ответ
+  // вместо строк уходили неразрешённые обещания — группы «Обращения» и «Заявки» были пустыми.
+  const inquiryGroups = await Promise.all((["expert", "catalog"] as const).map(async (source) =>
+    (await listInquiries(source))
+      .filter((row) => `${row.id} ${row.part} ${row.phone}`.toLowerCase().includes(q))
+      .slice(0, 3)
+      .map((row) => ({ group: source === "expert" ? "Обращения" : "Заявки", label: `Заявка № ${row.id}`, meta: `${row.part} · ${maskPhone(String(row.phone))}`, href: `/admin/${source === "catalog" ? "applications" : "requests"}?q=${row.id}` }))));
+
   const results = [
     ...(await listOrders()).filter((row) => `${row.id} ${Number(row.id) + 1000} ${row.name} ${row.phone}`.toLowerCase().includes(q)).slice(0, 6).map((row) => ({ group: "Заказы", label: `Заказ № ${Number(row.id) + 1000}`, meta: `${row.name} · ${maskPhone(String(row.phone))}`, href: `/admin/orders?q=${Number(row.id) + 1000}` })),
-    ...(["expert", "catalog"] as const).flatMap(async (source) => (await listInquiries(source)).filter((row) => `${row.id} ${row.part} ${row.phone}`.toLowerCase().includes(q)).slice(0, 3).map((row) => ({ group: source === "expert" ? "Обращения" : "Заявки", label: `Заявка № ${row.id}`, meta: `${row.part} · ${maskPhone(String(row.phone))}`, href: `/admin/${source === "catalog" ? "applications" : "requests"}?q=${row.id}` }))),
+    ...inquiryGroups.flat(),
     ...(await listInventory()).filter((row) => `${row.id} ${row.name} ${skuById.get(String(row.id)) ?? ""}`.toLowerCase().includes(q)).slice(0, 7).map((row) => ({ group: "Детали", label: String(row.name), meta: `Артикул / SKU: ${skuById.get(String(row.id)) ?? row.id}`, href: `/admin/inventory?q=${encodeURIComponent(String(row.id))}` })),
   ];
   return Response.json({ results }, { headers: { "Cache-Control": "no-store" } });

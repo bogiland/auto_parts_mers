@@ -1,12 +1,34 @@
-import {applyVacancy} from '@/lib/vacancies';
-import {sameOrigin} from '@/lib/staff-auth';
-export const runtime='nodejs';
-export async function POST(request:Request){
- if(!sameOrigin(request))return new Response(null,{status:403});
- const reader=request.body?.getReader();if(!reader)return new Response(null,{status:400});
- const chunks:Uint8Array[]=[];let size=0;
- try{for(;;){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>12000){await reader.cancel();return new Response(null,{status:413});}chunks.push(value);}
- const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
- const body=JSON.parse(new TextDecoder().decode(bytes));if(!body||typeof body!=='object'||Array.isArray(body))return new Response(null,{status:400});
- await applyVacancy(body);return Response.json({ok:true},{headers:{'Cache-Control':'no-store'}});
- }catch(e){const message=e instanceof Error?e.message:'';if(['Проверьте имя, телефон, мессенджер и согласие.','Вакансия закрыта.'].includes(message))return Response.json({message},{status:400});return Response.json({message:'Не удалось отправить отклик. Попробуйте позже.'},{status:400});}}
+import { applyVacancy } from "@/lib/vacancies";
+import { BodyTooLarge, bodyLimits, clientIp, humanOrFallback, logFailure, readJson, sameOriginRequest } from "@/lib/http";
+import { allow, tooMany, windows } from "@/lib/rate-limit";
+import { toInternational } from "@/lib/staff-db";
+
+export const runtime = "nodejs";
+
+export async function POST(request: Request) {
+  if (!sameOriginRequest(request)) return new Response(null, { status: 403 });
+
+  let body: Record<string, unknown>;
+  try { body = await readJson(request, bodyLimits.form); }
+  catch (error) {
+    if (error instanceof BodyTooLarge) return new Response(null, { status: 413 });
+    return new Response(null, { status: 400 });
+  }
+
+  // Предел по адресу и по номеру — раздельно, как на оформлении заказа.
+  const ip = clientIp(request);
+  if (!(await allow("apply:ip", ip, windows.applyIp))) return tooMany();
+  const phone = typeof body.phone === "string" ? body.phone : "";
+  if (phone && !(await allow("apply:phone", toInternational(phone) || phone, windows.applyPhone))) return tooMany();
+
+  try {
+    await applyVacancy(body);
+    return Response.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    // Наружу идут только наши собственные понятные сообщения; текст ошибки базы — нет.
+    const message = humanOrFallback(error, "Не удалось отправить отклик. Попробуйте позже.");
+    if (message !== "Не удалось отправить отклик. Попробуйте позже.") return Response.json({ message }, { status: 400 });
+    const reference = logFailure("Отклик на вакансию", error, { ip });
+    return Response.json({ message, reference }, { status: 400 });
+  }
+}
