@@ -39,7 +39,19 @@ const contentSecurityPolicy = [
   "frame-src https://challenges.cloudflare.com",
 ].join("; ");
 
+/**
+ * Самый большой запрос, который вообще имеет смысл принимать: карточка детали
+ * с десятью фотографиями. Проверка стоит здесь, до маршрута, чтобы заведомо
+ * неподъёмный запрос получал отказ как можно раньше.
+ */
+const maxBodyBytes = 12_000_000;
+
 export function proxy(request: NextRequest) {
+  const declared = Number(request.headers.get("content-length") ?? "");
+  if (Number.isFinite(declared) && declared > maxBodyBytes) {
+    return new NextResponse(null, { status: 413, headers: { "Cache-Control": "no-store", Connection: "close" } });
+  }
+
   const response = NextResponse.next();
 
   // Общие заголовки для всех страниц и запросов.

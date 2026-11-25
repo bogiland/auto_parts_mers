@@ -231,3 +231,17 @@ export async function createOrder(input: OrderInput, owner: OrderOwner): Promise
     return (await buildOrder(row, settings, client))!;
   }));
 }
+
+/**
+ * Есть ли уже заказ по этому ключу у этого же покупателя.
+ *
+ * Нужна маршруту оформления: повтор после обрыва связи не должен упираться
+ * в предел на число заказов. Человек, у которого трижды оборвался интернет,
+ * шлёт ту же форму с тем же ключом — это одна попытка, а не три, и отказ
+ * «слишком много запросов» лишил бы его собственного заказа.
+ */
+export async function orderExistsForOwner(key: string, owner: OrderOwner): Promise<boolean> {
+  if (typeof key !== "string" || !key) return false;
+  const row = await one<{ owner_scope: string | null }>("SELECT owner_scope FROM orders WHERE idempotency_key = $1", [key]);
+  return Boolean(row) && row?.owner_scope === ownerScope(owner);
+}

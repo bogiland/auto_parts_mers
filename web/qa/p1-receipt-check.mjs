@@ -1,8 +1,8 @@
 // П1.3/П1.4 — чек по ссылке, срок и отзыв ссылки, фото выдачи, телефон в API.
 const BASE = "http://localhost:3000";
 const ORIGIN = { Origin: BASE };
-const PHONE = "+37360900011";
-const PASS = process.env.P1_PASS;
+const PHONE = process.env.P1_PHONE ?? "+37360900011";
+const PASS = process.env.P1_PASS ?? process.env.NAA_QA_PASSWORD;
 const PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
 const jar = () => ({ cookies: new Map() });

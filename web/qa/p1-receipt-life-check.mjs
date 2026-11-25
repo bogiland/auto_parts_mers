@@ -2,8 +2,8 @@
 import { execFileSync } from "node:child_process";
 const BASE = "http://localhost:3000";
 const ORIGIN = { Origin: BASE };
-const PHONE = "+37360900011";
-const PASS = process.env.P1_PASS;
+const PHONE = process.env.P1_PHONE ?? "+37360900011";
+const PASS = process.env.P1_PASS ?? process.env.NAA_QA_PASSWORD;
 const ORDER = Number(process.argv[2]);
 const rounds = Number(process.argv[3] ?? 3);
 

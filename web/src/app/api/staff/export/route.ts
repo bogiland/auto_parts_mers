@@ -1,5 +1,5 @@
 import { currentStaff } from "@/lib/staff-auth";
-import { audit, exportOrders, hasConfirmation } from "@/lib/staff-db";
+import { audit, consumeConfirmation, exportOrders } from "@/lib/staff-db";
 
 export const runtime = "nodejs";
 
@@ -14,8 +14,8 @@ export async function GET() {
   if (!staff) return new Response(null, { status: 401 });
   if (staff.role !== "owner") return new Response(null, { status: 404 });
   // Выгрузка уносит из системы телефоны всех покупателей разом. Живой куки для этого мало:
-  // пароль вводится заново, отметка живёт пять минут.
-  if (!(await hasConfirmation(staff, "export"))) {
+  // пароль вводится заново, и подтверждение тратится на эту одну выгрузку.
+  if (!(await consumeConfirmation(staff, "export"))) {
     return Response.json({ message: "Подтвердите выгрузку паролем.", needConfirm: "export" }, { status: 403, headers: { "Cache-Control": "no-store" } });
   }
   const rows = (await exportOrders());

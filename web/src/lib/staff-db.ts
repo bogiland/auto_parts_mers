@@ -428,7 +428,20 @@ export async function recordConfirmation(staff: Staff, scope: string) {
   await audit(staff, "Подтверждение паролем", scope);
 }
 
-/** Есть ли свежее подтверждение для этого действия. */
+/**
+ * Проверяет подтверждение и тут же его тратит: одно подтверждение — одно действие.
+ * Окна в пять минут, в которое помещается сколько угодно смен ролей, быть не должно:
+ * отошедшему от стола владельцу хватит и одного случайного нажатия.
+ */
+export async function consumeConfirmation(staff: Staff, scope: string): Promise<boolean> {
+  const row = await one<{ at: string }>(
+    "DELETE FROM staff_confirmations WHERE user_id = $1 AND scope = $2 RETURNING at",
+    [staff.id, scope],
+  );
+  return Boolean(row) && Date.now() - Number(row?.at ?? 0) < confirmTtlMs;
+}
+
+/** Только проверка, без траты: нужна интерфейсу, чтобы заранее спросить пароль. */
 export async function hasConfirmation(staff: Staff, scope: string): Promise<boolean> {
   const row = await one<{ at: string }>(
     "SELECT at FROM staff_confirmations WHERE user_id = $1 AND scope = $2 ORDER BY at DESC LIMIT 1",

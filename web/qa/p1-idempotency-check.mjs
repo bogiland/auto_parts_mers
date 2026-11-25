@@ -16,7 +16,8 @@ function store(j, res) {
 const header = (j) => [...j.cookies].map(([k, v]) => `${k}=${v}`).join("; ");
 
 async function call(j, path, init = {}) {
-  const headers = { ...(init.headers ?? {}) };
+  // Публичные формы принимают запрос только со своей страницы (П2): без Origin будет 403.
+  const headers = { Origin: BASE, ...(init.headers ?? {}) };
   const c = header(j);
   if (c) headers.Cookie = c;
   if (init.body) headers["Content-Type"] = "application/json";

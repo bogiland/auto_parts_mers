@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { cookieName } from "@/lib/staff-auth";
-import { addStaffInquiry, addUser, changeRole, confirmedActions, findPeople, grantStaffAccess, hasConfirmation, importInventory, removeUser, revealInquiryPhone, revealPhone, session, setCost, setInquiryStatus, setInventory, updateSettings, type Role } from "@/lib/staff-db";
+import { addStaffInquiry, addUser, changeRole, confirmedActions, findPeople, grantStaffAccess, consumeConfirmation, importInventory, removeUser, revealInquiryPhone, revealPhone, session, setCost, setInquiryStatus, setInventory, updateSettings, type Role } from "@/lib/staff-db";
 import { addPart, setPartPhotos } from "@/lib/parts-db";
 import { currentStock, recordStockDiff } from "@/lib/orders-db";
 import { BodyTooLarge, bodyLimits, humanOrFallback, logFailure, readJson, sameOriginRequest } from "@/lib/http";
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     return new Response(null, { status: 400 });
   }
   // Смена ролей и выдача доступа требуют заново введённого пароля: живой куки мало.
-  if (confirmedActions.has(String(body.action)) && !(await hasConfirmation(actor, String(body.action)))) {
+  if (confirmedActions.has(String(body.action)) && !(await consumeConfirmation(actor, String(body.action)))) {
     return Response.json({ message: "Подтвердите действие паролем.", needConfirm: String(body.action) }, { status: 403, headers: { "Cache-Control": "no-store" } });
   }
   try {

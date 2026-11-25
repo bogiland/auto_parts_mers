@@ -1,5 +1,5 @@
 import { isValidPhoneNumber } from "libphonenumber-js";
-import { createOrder, OrderError, type OrderInput } from "@/lib/checkout-db";
+import { createOrder, OrderError, orderExistsForOwner, type OrderInput } from "@/lib/checkout-db";
 import { currentCustomer } from "@/lib/customer-auth";
 import { guestCookieHeader, readGuestId } from "@/lib/guest-session";
 import { BodyTooLarge, bodyLimits, clientIp, logFailure, readJson, sameOriginRequest } from "@/lib/http";
@@ -30,22 +30,31 @@ export async function POST(request: Request) {
   if (typeof input.comment !== "string" || input.comment.length > 2000) return invalid("comment", "Комментарий слишком длинный.");
   if (!Array.isArray(input.items)) return invalid("items", "Проверьте состав корзины.");
 
-  // Два независимых предела. По адресу — чтобы бот не завалил нас потоком заказов;
-  // по номеру — чтобы тот же бот через разные адреса не засыпал один номер.
-  // Проверяются раздельно: заказ с другого адреса проходит, даже когда первый адрес исчерпан.
-  const ip = clientIp(request);
-  if (!(await allow("checkout:ip", ip, windows.checkoutIp))) return tooMany();
-  if (!(await allow("checkout:phone", toInternational(input.phone) || input.phone, windows.checkoutPhone))) return tooMany();
-
   // Владелец заказа известен до вставки: вошедший покупатель — по кабинету,
   // гость — по куке браузера. Привязка происходит в той же транзакции, что и создание,
   // поэтому чужой заказ в кабинет попасть не может.
   const customer = await currentCustomer();
   const { guestId, fresh } = await readGuestId();
+  const owner = { customerId: customer?.id ?? null, guestId };
+
+  // Два независимых предела. По адресу — чтобы бот не завалил нас потоком заказов;
+  // по номеру — чтобы тот же бот через разные адреса не засыпал один номер.
+  // Проверяются раздельно: заказ с другого адреса проходит, даже когда первый адрес исчерпан.
+  //
+  // Повтор уже созданного заказа пределы не трогает: человек, у которого трижды
+  // оборвалась связь, шлёт ту же форму с тем же ключом — это одна попытка, а не три,
+  // и отказ «слишком много запросов» отнял бы у него собственный заказ (гарантия П1).
+  const ip = clientIp(request);
+  const repeat = await orderExistsForOwner(input.key, owner);
+  if (!repeat) {
+    if (!(await allow("checkout:ip", ip, windows.checkoutIp))) return tooMany();
+    if (!(await allow("checkout:phone", toInternational(input.phone) || input.phone, windows.checkoutPhone))) return tooMany();
+  }
+
   const headers: Record<string, string> = { "Cache-Control": "no-store" };
   if (!customer && fresh) headers["Set-Cookie"] = guestCookieHeader(guestId);
   try {
-    const order = (await createOrder(input, { customerId: customer?.id ?? null, guestId }));
+    const order = (await createOrder(input, owner));
     return Response.json(order, { status: 201, headers });
   }
   catch (error) {
