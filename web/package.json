@@ -7,6 +7,7 @@
     "seed:catalog": "node scripts/seed-catalog-structure.mjs",
     "seed:brands": "node scripts/seed-brands.mjs",
     "fix:duplicates": "node scripts/merge-duplicate-products.mjs",
+    "seed:demo-more": "node scripts/seed-demo-more.mjs",
     "verify:demo": "node scripts/verify-demo.mjs",
     "dev": "next dev --webpack",
     "build": "next build --webpack",

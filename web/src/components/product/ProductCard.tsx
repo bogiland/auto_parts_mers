@@ -43,7 +43,10 @@ export function ProductCard({ className = "", discount = false, product }: Produ
       </div>
       <p className={`mt-2 whitespace-nowrap text-price font-bold ${discount && isFixedPrice ? "text-accent" : "text-ink"}`}>{currency === "rub" && product.priceRub !== undefined && product.priceMode === "fixed" ? `≈ ${product.priceRub.toLocaleString("ru-RU")} руб. ПМР` : priceLabel(product)}{oldPrice && currency === "mdl" ? <span className="ml-2 text-meta font-normal text-ink-3 line-through">{oldPrice}</span> : null}</p>
       {product.priceRub !== undefined && product.priceMode === "fixed" && <p className="text-meta text-ink-2">{currency === "rub" ? priceLabel(product) : `≈ ${product.priceRub.toLocaleString("ru-RU")} руб. ПМР`}</p>}
-      <p className="mt-1 truncate text-meta text-ink-2">{product.brand} · {product.sku}</p>
+      {/* Бренд — производитель, донор — машина, с которой снята деталь. У разных экземпляров
+          с одним номером детали донор и есть то, чем предложения отличаются друг от друга. */}
+      <p className="mt-1 truncate text-meta text-ink-2">{[product.brand, product.sku].filter(Boolean).join(" · ")}</p>
+      {product.donor ? <p className="truncate text-meta text-ink-2">С машины: {product.donor}</p> : null}
       <h3 className="mt-1 line-clamp-2 min-h-10 text-nav font-bold text-ink">{product.name}</h3>
       {product.reviewCount>0&&<p className="text-meta text-ink-2 mt-2">★ {product.rating.toFixed(1)} · {product.reviewCount} отзывов</p>}
       <div className="mt-auto pt-2">
