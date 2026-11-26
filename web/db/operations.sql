@@ -89,7 +89,9 @@ $$;
 CREATE OR REPLACE FUNCTION crm_capture() RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE cid integer; caseid integer; label text; src text; target integer;
 BEGIN
- IF TG_TABLE_NAME='orders' THEN label := 'Заказ № ' || (NEW.id+1000); src := NEW.source; ELSE label:=NEW.part || ' ' || NEW.vehicle; src:=NEW.source; END IF;
+ IF TG_TABLE_NAME='orders' THEN label := 'Заказ № ' || (NEW.id+1000); src := NEW.source; ELSE
+   -- Оператор видит в карточке всё сразу: деталь, номер, донора и машину клиента. У старых заявок этих полей нет — останется прежний текст.
+   label:=concat_ws(' · ', NULLIF(NEW.part,''), 'OEM ' || NULLIF(to_jsonb(NEW)->>'oem',''), 'ID ' || NULLIF(to_jsonb(NEW)->>'product_id',''), 'с машины ' || NULLIF(to_jsonb(NEW)->>'donor',''), 'машина клиента: ' || NULLIF(NEW.vehicle,''), 'искали: ' || NULLIF(NULLIF(to_jsonb(NEW)->>'search_query',''),NEW.part)); src:=NEW.source; END IF;
  SELECT client_id INTO cid FROM crm_phone_aliases WHERE phone=crm_phone(NEW.phone);
  IF cid IS NULL THEN INSERT INTO crm_clients(phone,name) VALUES(crm_phone(NEW.phone),CASE WHEN TG_TABLE_NAME='orders' THEN to_jsonb(NEW)->>'name' ELSE '' END)
  ON CONFLICT(phone) DO UPDATE SET name=CASE WHEN crm_clients.name='' THEN EXCLUDED.name ELSE crm_clients.name END RETURNING id INTO cid;

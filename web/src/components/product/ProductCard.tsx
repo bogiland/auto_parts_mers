@@ -7,15 +7,18 @@ import Image from "next/image";
 import Link from "next/link";
 
 import type { Product } from "@/domain/catalog";
+import { availabilityNote, compatibilityNote } from "@/lib/product-notes";
 
 type ProductCardProps = {
   product: Product;
   discount?: boolean;
   className?: string;
+  /** Доноры выбранной машины: по ним видно, снята ли деталь с такой же машины. */
+  carDonorIds?: string[];
 };
 
 function priceLabel(product: Product) {
-  return product.priceMode === "fixed" && product.priceMdl ? `${product.priceMdl.toLocaleString("ru-RU")} L.` : "Уточнить цену";
+  return product.priceMode === "fixed" && product.priceMdl ? `${product.priceMdl.toLocaleString("ru-RU")} L.` : "Цена по запросу";
 }
 
 function oldPriceLabel(product: Product, discount: boolean) {
@@ -24,7 +27,8 @@ function oldPriceLabel(product: Product, discount: boolean) {
     : null;
 }
 
-export function ProductCard({ className = "", discount = false, product }: ProductCardProps) {
+export function ProductCard({ carDonorIds, className = "", discount = false, product }: ProductCardProps) {
+  const compatibility = compatibilityNote(product, carDonorIds);
   const currency = useCurrency();
   const oldPrice = oldPriceLabel(product, discount);
   const isFixedPrice = product.priceMode === "fixed" && product.priceMdl;
@@ -47,12 +51,13 @@ export function ProductCard({ className = "", discount = false, product }: Produ
           с одним номером детали донор и есть то, чем предложения отличаются друг от друга. */}
       <p className="mt-1 truncate text-meta text-ink-2">{[product.brand, product.sku].filter(Boolean).join(" · ")}</p>
       {product.donor ? <p className="truncate text-meta text-ink-2">С машины: {product.donor}</p> : null}
+      {compatibility ? <p className={`text-meta ${compatibility.startsWith("Снята") ? "text-success" : "text-ink-2"}`}>{compatibility}</p> : null}
       <h3 className="mt-1 line-clamp-2 min-h-10 text-nav font-bold text-ink">{product.name}</h3>
       {product.reviewCount>0&&<p className="text-meta text-ink-2 mt-2">★ {product.rating.toFixed(1)} · {product.reviewCount} отзывов</p>}
       <div className="mt-auto pt-2">
         <CartControl className="w-full" product={product} />
       </div>
-      <p className="mt-2 text-center text-meta text-ink-2">{(product.stock??0)>0?'В наличии · Слободзея':'Продано'}</p>
+      <p className="mt-2 text-center text-meta text-ink-2">{availabilityNote(product)}</p>
     </article>
   );
 }

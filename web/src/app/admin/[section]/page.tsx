@@ -30,6 +30,7 @@ import { allPages, placements } from "@/lib/pages-db";
 import { getSettings } from "@/lib/checkout-db";
 import { requireStaff } from "@/lib/staff-auth";
 import { listAudit, listCosts, listInquiries, listOrders, listUsers, moneySummary } from "@/lib/staff-db";
+import { listSearchMisses } from "@/lib/search-misses";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -73,6 +74,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
     {id === "clients" && <CrmWorkspace mode="clients" />}
     {id === "returns" && <ReturnsBoard candidates={(await Promise.all((await listOrderRows()).filter((row) => ["issued", "returned"].includes(row.status)).map(async (row) => (await orderDetail(row.id))))).filter((order): order is NonNullable<typeof order> => Boolean(order)).map((order) => ({ id: order.id, number: order.number, name: order.name, status: order.status, items: order.items.map((item) => ({ productId: item.productId, name: item.name, quantity: item.quantity, unitPriceMdl: item.unitPriceMdl, returnRestricted: item.returnRestricted })) }))} rows={(await listReturns())} />}
     {(id === "requests" || id === "applications") && <CrmWorkspace mode="requests" openNew={openNew} />}
+    {id === "requests" && <SearchMisses />}
     {id === "inventory" && <><details className="admin-card" open={openNew || undefined} style={{ marginBottom: 16 }}><summary>Быстрое добавление одной формой, без фото</summary><AddPartForm brands={referenceBrands} categories={referenceFlat} defaultOpen={openNew} makes={referenceMakes} types={partTypes} /></details><PartsBoard categories={referenceFlat.map((node) => ({ id: node.id, nameRu: node.nameRu, depth: node.depth }))} donors={(await listDonors())} locations={(await locationSuggestions())} makes={referenceMakes} openWizard={query.add === "1"} parts={(await listParts())} typeUsage={(await partTypeUsage())} types={partTypes} /></>}
     {id === "donors" && <DonorsBoard donors={(await listDonors())} makes={referenceMakes} />}
     {id === "pages" && <SitePages pages={(await allPages())} placements={[...placements]} />}
@@ -88,4 +90,17 @@ export default async function Page({ params, searchParams }: { params: Promise<{
       <a className="admin-button" href="/api/staff/export">Скачать CSV</a>
     </div>}
   </AdminShell>;
+}
+
+/**
+ * Что искали на сайте и не нашли. Без телефонов и имён: только запрос, машина и время.
+ * Это список того, что стоит завести на склад или на сайт, и подсказка для SEO.
+ */
+async function SearchMisses() {
+  const misses = await listSearchMisses(50);
+  return <section className="admin-card"><h2>Искали и не нашли</h2>
+    {misses.length ? <table className="admin-table"><thead><tr><th>Запрос</th><th>Машина</th><th>Раз</th><th>Последний</th></tr></thead><tbody>
+      {misses.map((miss) => <tr key={`${miss.query}-${miss.vehicle}`}><td>{miss.query}</td><td>{miss.vehicle || "—"}</td><td>{miss.hits}</td><td>{new Date(miss.last_at).toLocaleString("ru-RU", { timeZone: "Europe/Chisinau" })}</td></tr>)}
+    </tbody></table> : <p className="admin-muted">Пустых поисков пока не было.</p>}
+  </section>;
 }

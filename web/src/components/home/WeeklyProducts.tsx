@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Product } from "@/domain/catalog";
+import { availabilityNote } from "@/lib/product-notes";
 import { CartControl } from "@/components/cart/CartControl";
 import { ProductRail } from "@/components/product/ProductRail";
 
@@ -16,7 +17,7 @@ export function WeeklyProducts({ products }: { products: Product[] }) {
         <HomeCarousel label="Товар недели">
           {products.map((product) => <div className="flex min-w-0 items-center gap-4" key={product.id}>
             <Link className="deal-product-image relative shrink-0" href={`/products/${product.id}`}><Image alt={product.name} className="object-contain" fill sizes="140px" src={product.image.url} /></Link>
-            <div className="min-w-0"><p className="text-price font-bold text-accent">{product.priceMdl ? `${product.priceMdl.toLocaleString("ru-RU")} L.` : "Уточнить цену"}</p><p className="mt-2 text-meta text-ink-2">{product.brand} · {product.sku}</p><Link className="mt-2 block text-nav font-bold text-ink" href={`/products/${product.id}`}>{product.name}</Link><div className="mt-2"><CartControl product={product} /></div><p className="mt-2 text-meta text-ink-2">В наличии · Слободзея</p></div>
+            <div className="min-w-0"><p className="text-price font-bold text-accent">{product.priceMdl ? `${product.priceMdl.toLocaleString("ru-RU")} L.` : "Цена по запросу"}</p><p className="mt-2 text-meta text-ink-2">{product.brand} · {product.sku}</p><Link className="mt-2 block text-nav font-bold text-ink" href={`/products/${product.id}`}>{product.name}</Link><div className="mt-2"><CartControl product={product} /></div><p className="mt-2 text-meta text-ink-2">{availabilityNote(product)}</p></div>
           </div>)}
         </HomeCarousel>
       </div>

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { permanentRedirect } from "next/navigation";
 
-import { CatalogResultsPage } from "@/components/catalog/CatalogResultsPage";
 import { DirectionHome } from "@/components/catalog/direction-home";
 import { SiteHeader } from "@/components/header/SiteHeader";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -43,9 +42,9 @@ export default async function CatalogDirectionPage({ params, searchParams }: Cat
     return <><SiteHeader hours={homepage.hours} phone={homepage.phone} /><DirectionHome direction={direction} homepage={homepage} makes={makes} ownCategories={ownCategories} partBrands={partBrands.map(({ id, name }) => ({ id, name }))} /><SiteFooter /></>;
   }
 
-  const categorySlug = categorySlugFromPath(segment);
-  const category = homepage.categories.find((item) => item.slug === categorySlug);
-  if (!category) notFound();
-
-  return <><SiteHeader hours={homepage.hours} phone={homepage.phone} /><CatalogResultsPage categoryName={category.name} categorySlug={category.slug} homepage={homepage} searchParams={query} /><SiteFooter /></>;
+  // Адрес старого вида /catalog/<раздел>: раздел живёт внутри легковых. Перенаправляем
+  // туда с теми же фильтрами, а не отдаём 404 — по таким ссылкам приходят из закладок и поиска.
+  const rest = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) for (const entry of Array.isArray(value) ? value : value === undefined ? [] : [value]) rest.append(key, entry);
+  permanentRedirect(`/catalog/legkovye/${encodeURIComponent(segment)}${rest.size ? `?${rest}` : ""}`);
 }

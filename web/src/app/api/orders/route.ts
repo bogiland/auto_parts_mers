@@ -24,7 +24,9 @@ export async function POST(request: Request) {
   const invalid = (field: string, message: string) => Response.json({ field, message }, { status: 400 });
   if (typeof input.key !== "string" || !/^[a-f0-9-]{36}$/i.test(input.key)) return invalid("items", "Обновите страницу и повторите.");
   if (typeof input.name !== "string" || input.name.trim().length < 2 || input.name.length > 100) return invalid("name", "Укажите имя.");
-  if (typeof input.phone !== "string" || !isValidPhoneNumber(input.phone)) return invalid("phone", "Проверьте номер телефона.");
+  // Номер приводится к +373… так же, как в заявках: местный набор 68123456 — тот же человек.
+  if (typeof input.phone === "string") input.phone = toInternational(input.phone) || input.phone;
+  if (typeof input.phone !== "string" || !isValidPhoneNumber(input.phone)) return invalid("phone", "Проверьте номер телефона: например, +373 68 123 456.");
   if (!["call", "viber", "telegram"].includes(input.contactMethod)) return invalid("contactMethod", "Выберите способ связи.");
   if (typeof input.address !== "string" || input.address.length > 500) return invalid("address", "Проверьте адрес.");
   if (typeof input.comment !== "string" || input.comment.length > 2000) return invalid("comment", "Комментарий слишком длинный.");

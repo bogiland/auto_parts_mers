@@ -1,4 +1,4 @@
-import { getHomepage } from "@/lib/catalog-gateway";
+import { getLiveHomepage } from "@/lib/live-catalog";
 import type { Product } from "@/domain/catalog";
 
 import { normalizeArticle, normalizeQuery, parseQuery } from "./query";
@@ -46,9 +46,10 @@ function uniqueBySku(items: Product[]) {
 }
 
 export async function searchCatalog(query: string) {
-  const homepage = await getHomepage();
+  // Подсказки ищут по тому же складу, что и выдача: детали из админки, а не только демонабор.
+  const homepage = await getLiveHomepage();
   const parsed = parseQuery(query);
-  const products = uniqueBySku([...homepage.popularProducts, ...homepage.recommendedProducts]);
+  const products = uniqueBySku([...(homepage.liveProducts ?? []), ...homepage.popularProducts, ...homepage.recommendedProducts]);
   const categories: SearchCategory[] = homepage.categories.map((category) => ({
     name: category.name,
     path: `Запчасти / ${category.name}`,
@@ -59,7 +60,6 @@ export async function searchCatalog(query: string) {
     .map((product) => ({ product, score: productScore(product, searchedText) }))
     .filter((item) => item.score > 0)
     .filter(({ product }) => !parsed.brand || normalizeQuery(product.brand) === parsed.brand)
-    .filter(() => !parsed.vehicle || parsed.vehicle === "mercedes-benz")
     .sort((left, right) => right.score - left.score)
     .map(({ product }) => product);
   const filteredCategories = categories
@@ -78,8 +78,7 @@ export async function getSuggestions(query: string): Promise<SearchSuggestionRes
   const result = await searchCatalog(query);
   const exactCategory = result.categories.find((category) => normalizeQuery(category.name) === result.parsed.text);
   const searchParams = new URLSearchParams({ from_global: "true", q: query });
-  if (result.parsed.vehicle) searchParams.set("vehicle", result.parsed.vehicle);
-  if (result.parsed.brand) searchParams.set("brand", result.parsed.brand);
+
 
   return {
     products: result.products.slice(0, 6).map((product) => ({

@@ -39,6 +39,10 @@ export const windows = {
   orderStatusIp: { limit: 60, windowMs: 60_000 },
   /** Повторный ввод пароля перед опасным действием. */
   confirmIp: { limit: 10, windowMs: 60_000 },
+  /** Запись пустых поисков в журнал: живой человек столько не ищет, а бот не засорит список. */
+  searchMissIp: { limit: 30, windowMs: 60_000 },
+  /** Пересчёт «Показать N» при каждой галочке: щедро, но не бесконечно. */
+  catalogCountIp: { limit: 120, windowMs: 60_000 },
 } as const satisfies Record<string, Window>;
 
 /** 64-битный ключ блокировки из строки: pg_advisory_lock принимает только число. */

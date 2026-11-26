@@ -84,7 +84,7 @@ export function PhoneInput({ onValueChange, showError = false, defaultValue = ""
             </div>
           </div> : null}
         </div>
-        <input aria-label="Номер телефона" autoComplete="tel-national" className="min-w-0 flex-1 rounded-r-ui px-3 text-body text-ink outline-none placeholder:text-ink-3" inputMode="tel" onBlur={() => { setIsFocused(false); setIsTouched(true); }} onChange={handleNumberChange} onFocus={() => setIsFocused(true)} placeholder="68 123 456" required type="tel" value={displayNationalNumber(national, country)} />
+        <input aria-label="Номер телефона" autoComplete="tel-national" className="min-w-0 flex-1 rounded-r-ui px-3 text-body text-ink outline-none placeholder:text-ink-3" inputMode="tel" onBlur={() => { setIsFocused(false); setIsTouched(true); }} onChange={handleNumberChange} onFocus={() => setIsFocused(true)} placeholder="68 123 456" required data-error="Укажите номер телефона." type="tel" value={displayNationalNumber(national, country)} />
       </div>
       {showValidationError ? <p className="mt-1 text-meta text-accent">Проверьте номер телефона.</p> : null}
     </div>

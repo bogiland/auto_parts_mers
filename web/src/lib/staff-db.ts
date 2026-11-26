@@ -238,24 +238,27 @@ export async function listOrders() {
   return (await many("SELECT id, token, status, delivery_title, total_mdl, created_at, phone, name FROM orders ORDER BY id DESC LIMIT 200"));
 }
 
-export async function createInquiry(phone: string, part: string, vehicle: string, source: "expert" | "catalog") {
+export type InquiryDetails = { productId?: string | null; oem?: string; donor?: string; query?: string };
+
+export async function createInquiry(phone: string, part: string, vehicle: string, source: "expert" | "catalog", details: InquiryDetails = {}) {
   await ensureSeeded();
   const now = new Date().toISOString();
-  const normalized = normalizePhone(phone);
+  // Номер хранится в одном виде, как его набрал бы оператор: +373…, без пробелов.
+  const normalized = toInternational(phone) || normalizePhone(phone);
   const recent = await one<{ count: string }>(
     "SELECT COUNT(*) AS count FROM inquiries WHERE phone = $1 AND created_at >= $2",
     [normalized, new Date(Date.now() - 60_000).toISOString()],
   );
   if (Number(recent?.count ?? 0) >= 5) throw new Error("Попробуйте отправить заявку позже.");
   const created = await one<{ id: number }>(
-    "INSERT INTO inquiries (phone, part, vehicle, source, created_at) VALUES ($1,$2,$3,$4,$5) RETURNING id",
-    [normalized, part.trim(), vehicle.trim(), source, now],
+    "INSERT INTO inquiries (phone, part, vehicle, source, created_at, product_id, oem, donor, search_query) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id",
+    [normalized, part.trim(), vehicle.trim(), source, now, details.productId ?? null, (details.oem ?? "").trim(), (details.donor ?? "").trim(), (details.query ?? "").trim()],
   );
   return Number(created?.id);
 }
 
 export async function listInquiries(source: "expert" | "catalog") {
-  return (await many("SELECT id, phone, part, vehicle, status, created_at FROM inquiries WHERE source = $1 ORDER BY id DESC LIMIT 200", [source]));
+  return (await many("SELECT id, phone, part, vehicle, status, created_at, product_id, oem, donor, search_query FROM inquiries WHERE source = $1 ORDER BY id DESC LIMIT 200", [source]));
 }
 
 export async function revealInquiryPhone(actor: Staff, id: number) {

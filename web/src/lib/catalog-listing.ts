@@ -59,10 +59,20 @@ function categoryForProduct(product: Product) {
   return "accessories";
 }
 
-function matchesQuery(product: Product, query: string) {
+/** Номер детали без оформления: A654-094-00-04, a654 094 00 04 и A6540940004 — одно и то же. */
+export function compactArticle(value: string) {
+  return value.toLocaleLowerCase("ru-RU").replace(/ё/g, "е").replace(/[^a-zа-я0-9]/gi, "");
+}
+
+export function matchesQuery(product: Pick<Product, "name" | "brand" | "sku" | "oem" | "donor">, query: string) {
   if (!query) return true;
-  const source = `${product.name} ${product.brand} ${product.sku} ${product.oem ?? ""}`.toLocaleLowerCase("ru-RU");
-  return query.toLocaleLowerCase("ru-RU").split(/\s+/).every((token) => source.includes(token));
+  const source = `${product.name} ${product.brand} ${product.sku} ${product.oem ?? ""} ${product.donor ?? ""}`.toLocaleLowerCase("ru-RU").replace(/ё/g, "е");
+  const compactQuery = compactArticle(query);
+  // Артикул и OEM сравниваются без дефисов, пробелов и точек, в любом регистре.
+  if (compactQuery.length >= 4 && [product.sku, product.oem ?? ""].some((code) => code && compactArticle(code).includes(compactQuery))) return true;
+  const compactSource = compactArticle(source);
+  return query.toLocaleLowerCase("ru-RU").replace(/ё/g, "е").split(/\s+/).filter(Boolean)
+    .every((token) => source.includes(token) || (compactArticle(token).length > 0 && compactSource.includes(compactArticle(token))));
 }
 
 function isAvailable(product: Product) {
@@ -95,7 +105,7 @@ export function parseCatalogFilters(params: SearchParamsRecord): CatalogFilters 
   };
 }
 
-export function createCatalogListing(homepage: HomepageData, params: SearchParamsRecord, categorySlug?: string, ownCategoryId?: string): CatalogListing {
+export function createCatalogListing(homepage: HomepageData, params: SearchParamsRecord, categorySlug?: string, ownCategoryId?: string, carDonorIds?: string[]): CatalogListing {
   const filters = parseCatalogFilters(params);
   const allProducts = uniqueProducts(homepage);
   // У категории из справочника владельца есть настоящая привязка, угадывать по названию не нужно.
@@ -108,8 +118,10 @@ export function createCatalogListing(homepage: HomepageData, params: SearchParam
     .filter((product) => !filters.priceFrom || (product.priceMdl ?? 0) >= filters.priceFrom)
     .filter((product) => !filters.priceTo || (product.priceMdl ?? 0) <= filters.priceTo)
     .filter((product) => !filters.availability || isAvailable(product))
-    .filter(() => !filters.vehicle || filters.vehicle === "mercedes-benz")
-    .filter(() => !filters.model || filters.vehicle === "mercedes-benz");
+    // Выбранная машина оставляет только детали, снятые с таких же доноров.
+    // Раньше фильтр марки знал один Mercedes и ничего не отсеивал: после W213
+    // в тормозах всплывали колодки W204 и Camry.
+    .filter((product) => !carDonorIds || Boolean(product.donorId && carDonorIds.includes(product.donorId)));
   const products = withoutBrand.filter((product) => !filters.brands.length || filters.brands.includes(product.brand));
   // В фильтр попадают только настоящие бренды деталей. Деталь без бренда владелец ещё
   // не дозаполнил — пустую строку в список выбора ставить нельзя, выбрать её нечем.

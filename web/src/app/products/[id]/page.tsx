@@ -12,6 +12,7 @@ import { partByPublicId, productRedirect } from "@/lib/parts-db";
 import { ReviewsBlock } from "@/components/reviews/ReviewsBlock";
 import { AdSlot } from "@/components/ads/AdSlot";
 import { rating } from "@/lib/reviews";
+import { selectedCar } from "@/lib/selected-car";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,6 +47,8 @@ export default async function ProductPage({ params }: PageProps<"/products/[id]"
     notFound();
   }
 
+  // Машина покупателя видна и в карточке: здесь он решает, подходит ли деталь.
+  const { car } = await selectedCar();
   const recommendations = products.filter((item) => item.id !== product.id).slice(0, 6);
   const summary=await rating(product.id);product.rating=summary?.average??0;product.reviewCount=summary?.count??0;
 
@@ -56,7 +59,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[id]"
         <nav aria-label="Хлебные крошки" className="text-meta text-ink-2">
           <Link className="hover:text-accent" href="/">Главная</Link><span aria-hidden="true"> / </span><Link className="hover:text-accent" href="/catalog/legkovye">Каталог</Link><span aria-hidden="true"> / </span><span className="text-ink">{product.name}</span>
         </nav>
-        <ProductDetails key={product.id} product={product} />
+        <ProductDetails car={car} key={product.id} product={product} />
         <AdSlot slot="product" />
         <ReviewsBlock productId={product.id} compact />
         <section>

@@ -1,6 +1,10 @@
 import Link from "next/link";
 
-import { ProductRail } from "@/components/product/ProductRail";
+import { redirect } from "next/navigation";
+
+import { RememberCar } from "@/components/catalog/CarPlaque";
+import { ProductCard } from "@/components/product/ProductCard";
+import { createCatalogListing } from "@/lib/catalog-listing";
 import type { HomepageData } from "@/domain/catalog";
 import { donorsOf, showroomMake, type ShowroomMake } from "@/lib/vehicles-db";
 
@@ -46,6 +50,8 @@ export async function VehicleJourney({ homepage, path }: { homepage: HomepageDat
   if (!make) return null;
   const base = `/catalog/legkovye/${make.slug}`;
 
+  // Шаг с единственным вариантом проходится сам: выбирать из одной модели незачем.
+  if (!modelSlug && make.models.length === 1) redirect(`${base}/${make.models[0]!.slug}`);
   if (!modelSlug) {
     return <Shell>
       <Crumbs items={[{ href: base, label: make.name }, { label: "Выберите модель" }]} />
@@ -80,7 +86,11 @@ export async function VehicleJourney({ homepage, path }: { homepage: HomepageDat
   if (generationSlug && !generation) return null;
   const donors = donorsOf(make, model.slug, generation?.slug);
   const title = [make.name, model.name, generation?.name].filter(Boolean).join(" ");
-  const listing = `/search?donors=${encodeURIComponent(donors.join(","))}`;
+  const carSlug = [make.slug, model.slug, generation?.slug].filter(Boolean).join("/");
+  const listing = `/search?car=${encodeURIComponent(carSlug)}`;
+  // Показываем детали именно этой машины. Раньше здесь стояла лента популярных товаров
+  // со всего склада — и под W212 оказывались колодки W204 и Camry.
+  const own = createCatalogListing(homepage, {}, undefined, undefined, donors);
 
   return <Shell>
     <Crumbs items={[{ href: base, label: make.name }, { href: `${base}/${model.slug}`, label: model.name }, { label: generation?.name ?? "Детали" }]} />
@@ -91,8 +101,10 @@ export async function VehicleJourney({ homepage, path }: { homepage: HomepageDat
     <div className="mt-4 flex flex-wrap gap-2">
       <Link className="inline-flex h-btn items-center rounded-ui bg-accent px-4 text-btn font-bold text-white" href={`${listing}&availability=in_stock`}>Показать то, что в наличии</Link>
       <Link className="inline-flex h-btn items-center rounded-ui border border-accent px-4 text-btn font-bold text-accent" href={listing}>Показать все детали</Link>
-      <a className="inline-flex h-btn items-center rounded-ui border border-line px-4 text-btn font-bold text-ink" href="#expert-request">Заявка на подбор</a>
+      <a className="inline-flex h-btn items-center rounded-ui border border-line px-4 text-btn font-bold text-ink" href="/#expert-request">Заявка на подбор</a>
     </div>
-    <div className="mt-6"><ProductRail products={homepage.popularProducts} /></div>
+    <RememberCar car={{ slug: carSlug, label: title }} explicit />
+    {own.products.length ? <div className="mt-6 grid min-w-0 grid-cols-2 gap-2 md:grid-cols-3 md:gap-4 xl:grid-cols-4">{own.products.slice(0, 12).map((product) => <ProductCard carDonorIds={donors} key={product.id} product={product} />)}</div> : null}
+    {own.total > 12 ? <Link className="mt-4 inline-flex text-body font-bold text-accent hover:text-accent-hover" href={listing}>Все {own.total} {partsWord(own.total)} →</Link> : null}
   </Shell>;
 }

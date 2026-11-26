@@ -54,6 +54,9 @@ export default async function CatalogCategoryPage({ params, searchParams }: Cata
   const own = (await findPublicCategory(categoryPath.at(-1) ?? ""));
   if (own?.status === "redirect") permanentRedirect(`/catalog/${directionSlug}/${own.slug}`);
 
+  // Фильтр отправляется туда же, где стоит человек. Раньше он уходил на /catalog/<раздел> —
+  // такого адреса нет, и «Применить» открывало чёрную английскую 404.
+  const here = `/catalog/${directionSlug}/${categoryPath.join("/")}`;
   let content: React.ReactNode;
   if (directionSlug === "legkovye" && first === "brands") {
     // Марка показывается, только если у неё есть деталь: ссылок в пустоту больше нет.
@@ -69,7 +72,7 @@ export default async function CatalogCategoryPage({ params, searchParams }: Cata
   } else if (own && own.status === "hidden") {
     content = <main className="container-site section-stack bg-surface-2 pb-12 pt-4"><section className="rounded-ui bg-white p-4 desktop:p-6"><h1 className="text-section font-bold text-ink">Раздел временно недоступен</h1><p className="mt-2 text-body text-ink-2">Этот раздел каталога сейчас закрыт. Загляните позже или напишите оператору — подберём деталь вручную.</p><Link className="mt-4 inline-flex rounded-ui bg-accent px-4 py-3 text-btn font-bold text-white hover:bg-accent-hover" href="/catalog/legkovye">Вернуться в каталог</Link></section></main>;
   } else if (own && own.status === "ok") {
-    content = <CatalogResultsPage categoryName={own.name} categorySlug={own.slug} homepage={homepage} intro={own.intro} ownCategoryId={own.id} searchParams={query} />;
+    content = <CatalogResultsPage categoryName={own.name} categorySlug={own.slug} homepage={homepage} intro={own.intro} ownCategoryId={own.id} pathOverride={here} searchParams={query} />;
   } else {
     // The homepage also links to the built-in categories when the live
     // directory contains a different set of slugs.
@@ -84,7 +87,7 @@ export default async function CatalogCategoryPage({ params, searchParams }: Cata
       }
       notFound();
     }
-    content = <CatalogResultsPage categoryName={category.name} categorySlug={category.slug} homepage={homepage} searchParams={query} />;
+    content = <CatalogResultsPage categoryName={category.name} categorySlug={category.slug} homepage={homepage} pathOverride={here} searchParams={query} />;
   }
 
   return <><SiteHeader hours={homepage.hours} phone={homepage.phone} />{content}<SiteFooter /></>;

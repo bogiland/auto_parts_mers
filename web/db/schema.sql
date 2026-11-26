@@ -432,3 +432,14 @@ DROP TRIGGER IF EXISTS staff_audit_no_change ON staff_audit;
 CREATE TRIGGER staff_audit_no_change
   BEFORE UPDATE OR DELETE OR TRUNCATE ON staff_audit
   FOR EACH STATEMENT EXECUTE FUNCTION staff_audit_append_only();
+
+/* ---------- П5: журнал пустых поисков и подробности заявки ---------- */
+
+-- Журнал пустых поисков (search_misses) уже заведён в db/operations.sql: запрос, машина, время.
+
+-- Заявка «Узнать цену» приходит уже с деталью: оператор не переспрашивает.
+-- Старые заявки получают пустые значения и выглядят как раньше.
+ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS product_id text;
+ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS oem text NOT NULL DEFAULT '';
+ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS donor text NOT NULL DEFAULT '';
+ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS search_query text NOT NULL DEFAULT '';

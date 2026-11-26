@@ -69,7 +69,7 @@ export function SearchBox({ mobile = false }: SearchBoxProps) {
         price: product.price ? `${product.price.toLocaleString("ru-RU")} L.` : "Уточнить цену",
       })),
       ...suggestions.categories.map((category) => ({ description: category.path, href: `/catalog/legkovye/${category.slug}?${categoryParams}`, id: `category-${category.slug}`, label: category.name })),
-      ...suggestions.brands.map((brand) => ({ href: `/search?q=${encodeURIComponent(query)}&brand=${encodeURIComponent(brand.slug)}&from_global=true`, id: `brand-${brand.slug}`, label: brand.name })),
+      ...suggestions.brands.map((brand) => ({ href: `/search?q=${encodeURIComponent(query)}&brand=${encodeURIComponent(brand.name)}&from_global=true`, id: `brand-${brand.slug}`, label: brand.name })),
     ];
   }, [query, suggestions]);
 
@@ -188,7 +188,7 @@ export function SearchBox({ mobile = false }: SearchBoxProps) {
             })}</div> : null}
             {!isLoading && suggestions?.brands.length ? <div className="py-2"><p className="px-3 py-2 text-meta font-bold text-ink-2">Бренды</p>{suggestions.brands.map((brand) => {
               const index = items.findIndex((item) => item.id === `brand-${brand.slug}`);
-              return <Link aria-selected={activeIndex === index} className={`block px-3 py-2 text-body text-ink ${activeIndex === index ? "bg-surface-2" : "hover:bg-surface-2"}`} href={`/search?q=${encodeURIComponent(query)}&brand=${encodeURIComponent(brand.slug)}&from_global=true`} id={`${listId}-brand-${brand.slug}`} key={brand.slug} onClick={close} role="option"><Highlight query={query} value={brand.name} /></Link>;
+              return <Link aria-selected={activeIndex === index} className={`block px-3 py-2 text-body text-ink ${activeIndex === index ? "bg-surface-2" : "hover:bg-surface-2"}`} href={`/search?q=${encodeURIComponent(query)}&brand=${encodeURIComponent(brand.name)}&from_global=true`} id={`${listId}-brand-${brand.slug}`} key={brand.slug} onClick={close} role="option"><Highlight query={query} value={brand.name} /></Link>;
             })}</div> : null}
             {isEmpty ? <div className="p-4"><p className="text-body text-ink">Ничего не нашли — эксперт подберёт бесплатно</p><Link className="mt-3 inline-flex h-btn items-center rounded-ui bg-accent px-4 text-btn font-bold text-white hover:bg-accent-hover" href="/#expert-request" onClick={close}>Оставить заявку</Link></div> : null}
           </section>
