@@ -33,6 +33,23 @@ const updates = [
   { id: "ignition-kit", attrs: {}, cross: [{ number: "ZR6SII3320", source: "Bosch" }],
     fitments: [{ make: "Mercedes-Benz", model: "", generation: "", engine: "M272, M273, M278, M157", note: "по номеру A0041598103" }] },
 ];
+// Демо-машины: тормозные диски по каталогам для этой модели (передний, если не сказано иное).
+//  - W212 E 220 CDI: перед 295 × 28 вентилируемый (Brembo, каталог W212 E 220 CDI);
+//    зад 300 мм — диаметр сходится у всех, толщина расходится (10 или 22 мм), поэтому толщину не ставим.
+//  - Lexus RX (AL10) RX350 2010–2015: перед 328 × 28 вентилируемый (каталоги DBA, Raybestos).
+//  - Tesla Model 3 (не Performance): перед 320 × 25 вентилируемый — сервисное руководство Tesla.
+//  - Tesla Model S 2012–2021: перед 355 × 32 вентилируемый (Brembo, Dynamic Friction).
+//  - Lexus IS (XE30): в найденных каталогах только предыдущий кузов E20 — не заполняем.
+const demoDiscs = [
+  { id: "demo2-part-w212-brakes-0", attrs: { diameter_mm: 295, thickness_mm: 28, ventilated: true } },
+  { id: "demo2-part-w212-brakes-1", attrs: { diameter_mm: 300 } },
+  { id: "demo2-part-lexus-rx-al10-0", attrs: { diameter_mm: 328, thickness_mm: 28, ventilated: true } },
+  { id: "demo2-part-tesla-model3-0", attrs: { diameter_mm: 320, thickness_mm: 25, ventilated: true } },
+  { id: "demo2-part-tesla-models-0", attrs: { diameter_mm: 355, thickness_mm: 32, ventilated: true } },
+];
+// АКБ «AGM 95 Ah»: в названии уже стоят AGM и 95 А·ч. Пусковой ток 850 А и габариты 353 × 175 × 190 мм —
+// типоразмер AGM 95 А·ч у Varta и Exide. Номер A0009823108 каталоги называют по-разному — он не сверен.
+const battery = { id: "battery-agm", attrs: { cold_current_a: 850, length_mm: 353, width_mm: 175, height_mm: 190 } };
 const starters = ["pads-w213", "filter-om654", "air-filter-om654", "cabin-filter", "disc-w205", "brake-kit", "battery-agm", "oil-5w30", "strut-w213", "wheel-tire", "plugs-m274", "ignition-kit"];
 
 await db.connect();
@@ -64,6 +81,16 @@ try {
         fitments++;
       }
     }
+    for (const item of [...demoDiscs, battery]) {
+      await db.query("UPDATE catalog_products SET attrs = attrs || $2::jsonb WHERE id = $1", [item.id, JSON.stringify(item.attrs)]);
+    }
+    // Вид фильтра однозначно следует из типа детали — проставляем всем фильтрам, где он пуст.
+    const kinds = await db.query(`UPDATE catalog_products p SET attrs = p.attrs || jsonb_build_object('filter_kind',
+        CASE t.name_ru WHEN 'Масляный фильтр' THEN 'Масляный' WHEN 'Воздушный фильтр' THEN 'Воздушный'
+          WHEN 'Салонный фильтр' THEN 'Салонный' WHEN 'Топливный фильтр' THEN 'Топливный' END)
+      FROM ref_part_types t WHERE t.id = p.part_type_id AND t.name_ru IN ('Масляный фильтр','Воздушный фильтр','Салонный фильтр','Топливный фильтр')
+        AND NOT (p.attrs ? 'filter_kind')`);
+    console.log(`Демо-диски: ${demoDiscs.length}, АКБ: 1, вид фильтра проставлен: ${kinds.rowCount}.`);
     // Старая строка W201 без двигателя и годов, заведённая seed:attributes, заменяется сверенной.
     await db.query("DELETE FROM part_fitments WHERE product_id='pads-w213' AND engine='' AND verified=false");
     console.log(`Бренд проставлен: ${brand.rowCount}; новых строк применимости: ${fitments}; характеристики и кроссы обновлены у ${updates.length} товаров.`);
