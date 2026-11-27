@@ -3,12 +3,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Eye, EyeOff, History, Minus, Pencil, Trash, Undo2, X } from "lucide-react";
 import { ImagePicker } from "@/components/admin/ImagePicker";
 import { money, staffCall, when } from "@/components/admin/staff-client";
 import { AddPartWizard } from "./AddPartWizard";
 import type { PartType, VehicleMake } from "@/lib/reference-db";
+import type { AttrTemplate, Attrs } from "@/lib/attributes";
+import { AttributeFields, crossToText, draftFrom, fieldsFor, type AttrDraft, type CategoryRef } from "./AttributeFields";
 
 type Photo = { src: string; closeup: boolean; preview?: string };
 type Part = {
@@ -16,7 +18,9 @@ type Part = {
   condition: string; location: string; donorId: string | null; donorTitle: string; categoryId: string | null;
   includes: string; applicability: string; photos: Photo[]; returnRestricted: boolean; hidden: boolean;
   soldAt: string | null; createdAt: string;
+  oem: string; brandId: string | null; partTypeId: string | null; attrs: Attrs; crossNumbers: { number: string; source: string }[]; conditionNote: string;
 };
+type Fitment = { id: number; make: string; model: string; generation: string; yearFrom: number | null; yearTo: number | null; engine: string; verified: boolean; verifiedBy: string; note: string };
 type Move = { id: number; delta: number; reason: string; orderId: number | null; actor: string; at: string; canUndo: boolean };
 type Category = { id: string; nameRu: string; depth: number };
 type Donor = { id: string; make: string; model: string; generation: string; year: number | null; engine: string; mileage: number | null; parts: number };
@@ -43,9 +47,10 @@ const filters = [
 
 const staleBefore = Date.now() - 90 * 24 * 60 * 60 * 1000;
 
-export function PartsBoard({ parts, types, categories, donors, makes, locations, typeUsage, openWizard = false }: {
+export function PartsBoard({ parts, types, categories, donors, makes, locations, typeUsage, openWizard = false, templates = [], brands = [], categoryRefs = [] }: {
   parts: Part[]; types: PartType[]; categories: Category[]; donors: Donor[]; makes: VehicleMake[];
   locations: string[]; typeUsage: Record<string, number>; openWizard?: boolean;
+  templates?: AttrTemplate[]; brands?: { id: string; name: string }[]; categoryRefs?: CategoryRef[];
 }) {
   const router = useRouter();
   const [filter, setFilter] = useState<string>("all");
@@ -66,7 +71,7 @@ export function PartsBoard({ parts, types, categories, donors, makes, locations,
     return true;
   };
   const text = query.trim().toLowerCase();
-  const visible = parts.filter((part) => matches(part) && (!text || `${part.sku} ${part.nameRu} ${part.nameRo} ${part.donorTitle} ${part.location}`.toLowerCase().includes(text)));
+  const visible = parts.filter((part) => matches(part) && (!text || `${part.sku} ${part.oem} ${part.nameRu} ${part.nameRo} ${part.donorTitle} ${part.location}`.toLowerCase().includes(text)));
 
   async function run(body: Record<string, unknown>, success: string) {
     setBusy(true); setError(""); setNotice("");
@@ -120,15 +125,30 @@ export function PartsBoard({ parts, types, categories, donors, makes, locations,
       {!visible.length && <div className="admin-card admin-muted">{text || filter !== "all" ? "Ничего не найдено" : "Деталей пока нет. Нажмите «+ Деталь по шагам»."}</div>}
     </div>
 
-    {wizard && <AddPartWizard categories={categories} donors={donors} locations={locations} makes={makes} onClose={() => setWizard(false)} typeUsage={typeUsage} types={types} />}
-    {edit && <PartEditor categories={categories} error={error} moves={moves} onClose={() => { setEdit(null); setMoves(null); }} part={edit} run={run} />}
+    {wizard && <AddPartWizard brands={brands} categoryRefs={categoryRefs} templates={templates} categories={categories} donors={donors} locations={locations} makes={makes} onClose={() => setWizard(false)} typeUsage={typeUsage} types={types} />}
+    {edit && <PartEditor brands={brands} categoryRefs={categoryRefs} templates={templates} categories={categories} error={error} moves={moves} onClose={() => { setEdit(null); setMoves(null); }} part={edit} run={run} />}
   </>;
 }
 
-function PartEditor({ part, categories, moves, error, run, onClose }: {
+function PartEditor({ part, categories, moves, error, run, onClose, templates, brands, categoryRefs }: {
   part: Part; categories: Category[]; moves: Move[] | null; error: string;
   run: (body: Record<string, unknown>, success: string) => Promise<boolean>; onClose: () => void;
+  templates: AttrTemplate[]; brands: { id: string; name: string }[]; categoryRefs: CategoryRef[];
 }) {
+  // Поля П6. Старая деталь открывается с пустыми характеристиками и сохраняется без потерь:
+  // на сервер уходят только поля шаблона, остальное у детали не трогается.
+  const fields = fieldsFor(templates, categoryRefs, part.categoryId, part.partTypeId);
+  const [oem, setOem] = useState(part.oem ?? "");
+  const [brandId, setBrandId] = useState(part.brandId ?? "");
+  const [attrs, setAttrs] = useState<AttrDraft>(draftFrom(part.attrs ?? {}));
+  const [crossText, setCrossText] = useState(crossToText(part.crossNumbers ?? []));
+  const [conditionNote, setConditionNote] = useState(part.conditionNote ?? "");
+  const [fitments, setFitments] = useState<Fitment[] | null>(null);
+  const [fitment, setFitment] = useState({ make: "", model: "", generation: "", yearFrom: "", yearTo: "", engine: "", verified: false });
+  async function loadFitments() {
+    try { setFitments((await staffCall<{ fitments: Fitment[] }>("parts", { action: "fitments", id: part.id })).fitments); } catch { setFitments([]); }
+  }
+  useEffect(() => { void loadFitments(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [nameRu, setNameRu] = useState(part.nameRu);
   const [nameRo, setNameRo] = useState(part.nameRo);
   const [condition, setCondition] = useState(part.condition || "good");
@@ -162,11 +182,33 @@ function PartEditor({ part, categories, moves, error, run, onClose }: {
         <label className="admin-field">Место на складе<input onChange={(event) => setLocation(event.target.value)} value={location} /></label>
         <label className="admin-field admin-field-wide">Применимость<input onChange={(event) => setApplicability(event.target.value)} value={applicability} /></label>
         <label className="admin-field admin-field-wide">Что входит в сборку<textarea onChange={(event) => setIncludes(event.target.value)} rows={2} value={includes} /></label>
+        <label className="admin-field">Бренд детали<select onChange={(event) => setBrandId(event.target.value)} value={brandId}><option value="">не указан</option>{brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></label>
+        <label className="admin-field">Номер OEM<input onChange={(event) => setOem(event.target.value)} placeholder="Сфотографируйте табличку с номером" value={oem} /></label>
+        <label className="admin-field admin-field-wide">Состояние словами<input onChange={(event) => setConditionNote(event.target.value)} placeholder="скол на нижнем ухе, стекло целое" value={conditionNote} /></label>
+        <label className="admin-field admin-field-wide">Кросс-номера<input onChange={(event) => setCrossText(event.target.value)} placeholder="Brembo: P 50 011; Bosch: 0986494071" value={crossText} /></label>
         <p className="admin-note admin-field-wide">Категория каталога: {categories.find((item) => item.id === part.categoryId)?.nameRu ?? "без категории"}. Её меняют в карточке склада на вкладке «Детали» через справочник.</p>
       </div>
+      {fields.length > 0 && <div className="admin-card admin-sub-card"><h3>Характеристики</h3><p className="admin-muted">Все поля необязательные.</p><AttributeFields onChange={setAttrs} templates={fields} value={attrs} /></div>}
       {error && <p className="admin-error" role="alert">{error}</p>}
       <div className="admin-image-actions">
-        <button className="admin-button" onClick={async () => void (await run({ action: "update-part", id: part.id, nameRu, nameRo, condition, price, priceOnRequest: onRequest, stock, location, includes, applicability }, "Деталь сохранена"))} type="button">Сохранить</button>
+        <button className="admin-button" onClick={async () => void (await run({ action: "update-part", id: part.id, nameRu, nameRo, condition, price, priceOnRequest: onRequest, stock, location, includes, applicability, oem, brandId: brandId || null, conditionNote, crossNumbers: crossText, attrs: Object.fromEntries(fields.map((field) => [field.key, attrs[field.key] ?? ""])) }, "Деталь сохранена"))} type="button">Сохранить</button>
+      </div>
+
+      <div className="admin-card admin-sub-card">
+        <h3>Подходит к другим машинам</h3>
+        <p className="admin-muted">Донор — это машина, с которой деталь снята, а не обещание, что она подойдёт на другие. Сюда — только кузова, которые вы сверили; отметьте «проверено».</p>
+        <div className="admin-list">
+          {(fitments ?? []).map((item) => <div className="admin-row" key={item.id}>
+            <span>{[item.make, item.model, item.generation, item.yearFrom || item.yearTo ? `${item.yearFrom ?? ""}–${item.yearTo ?? ""}` : "", item.engine].filter(Boolean).join(" ")}{item.verified ? ` · проверено (${item.verifiedBy || "оператор"})` : " · не проверено"}{item.note ? ` · ${item.note}` : ""}</span>
+            <button className="admin-icon-button" aria-label="Удалить" onClick={async () => { if (await run({ action: "remove-fitment", id: item.id }, "Удалено")) void loadFitments(); }} type="button"><Trash size={14} /></button>
+          </div>)}
+          {fitments && !fitments.length && <p className="admin-muted">Пока только донор.</p>}
+        </div>
+        <div className="admin-form-grid">
+          {([["make", "Марка"], ["model", "Модель"], ["generation", "Кузов"], ["yearFrom", "Год с"], ["yearTo", "Год по"], ["engine", "Двигатель"]] as const).map(([key, label]) => <label className="admin-field" key={key}>{label}<input onChange={(event) => setFitment({ ...fitment, [key]: event.target.value })} value={fitment[key]} /></label>)}
+          <label className="admin-field admin-field-check"><input checked={fitment.verified} onChange={(event) => setFitment({ ...fitment, verified: event.target.checked })} type="checkbox" />Проверено</label>
+        </div>
+        <button className="admin-ghost-button" onClick={async () => { if (await run({ action: "add-fitment", id: part.id, ...fitment }, "Применимость добавлена")) { setFitment({ make: "", model: "", generation: "", yearFrom: "", yearTo: "", engine: "", verified: false }); void loadFitments(); } }} type="button">Добавить машину</button>
       </div>
 
       <div className="admin-card admin-sub-card">

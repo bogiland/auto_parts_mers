@@ -1,4 +1,5 @@
 import type { Category, HomepageData, Product } from "@/domain/catalog";
+import { formatValue, type AttrTemplate } from "@/lib/attributes";
 
 export type SearchParamValue = string | string[] | undefined;
 export type SearchParamsRecord = Record<string, SearchParamValue>;
@@ -23,9 +24,13 @@ export type BrandFacet = {
   name: string;
 };
 
+/** Фильтр по характеристике: значения со счётчиками. Параметр в адресе — a_<ключ>. */
+export type AttrFacet = { key: string; label: string; values: { value: string; label: string; count: number; checked: boolean }[] };
+
 export type CatalogListing = {
   availableCount: number;
   brandFacets: BrandFacet[];
+  attrFacets: AttrFacet[];
   categories: Category[];
   filters: CatalogFilters;
   pageCount: number;
@@ -80,8 +85,9 @@ function isAvailable(product: Product) {
 }
 
 function uniqueProducts(homepage: HomepageData) {
-  return [...new Map([...(homepage.liveProducts ?? []), ...homepage.popularProducts, ...homepage.recommendedProducts]
-    .map((product) => [`${product.sku}:${product.name}`, product])).values()];
+  return [...new Map([...homepage.popularProducts, ...homepage.recommendedProducts, ...(homepage.liveProducts ?? [])]
+    // Одна деталь — одна карточка: склад (liveProducts) идёт последним и в Map вытесняет стартовую витрину с тем же id.
+    .map((product) => [product.id, product])).values()];
 }
 
 export function parseCatalogFilters(params: SearchParamsRecord): CatalogFilters {
@@ -105,12 +111,27 @@ export function parseCatalogFilters(params: SearchParamsRecord): CatalogFilters 
   };
 }
 
-export function createCatalogListing(homepage: HomepageData, params: SearchParamsRecord, categorySlug?: string, ownCategoryId?: string, carDonorIds?: string[]): CatalogListing {
+/** Выбранные значения характеристик из адреса: ?a_diameter_mm=320&a_ventilated=true */
+export function attrSelections(params: SearchParamsRecord) {
+  const result = new Map<string, string[]>();
+  for (const [key, value] of Object.entries(params)) {
+    if (!key.startsWith("a_") || !/^a_[a-z][a-z0-9_]{0,39}$/.test(key)) continue;
+    const list = values(value).map(String).slice(0, 20);
+    if (list.length) result.set(key.slice(2), list);
+  }
+  return result;
+}
+
+const attrText = (value: unknown) => (value === undefined || value === null ? "" : String(value));
+
+export function createCatalogListing(homepage: HomepageData, params: SearchParamsRecord, categorySlug?: string, ownCategoryId?: string | string[], carDonorIds?: string[], attrTemplates: AttrTemplate[] = []): CatalogListing {
   const filters = parseCatalogFilters(params);
   const allProducts = uniqueProducts(homepage);
   // У категории из справочника владельца есть настоящая привязка, угадывать по названию не нужно.
-  const scopedProducts = ownCategoryId
-    ? allProducts.filter((product) => product.categoryId === ownCategoryId)
+  // Раздел показывает и детали своих подразделов — так же, как его считает счётчик в меню.
+  const ownIds = ownCategoryId === undefined ? null : new Set(Array.isArray(ownCategoryId) ? ownCategoryId : [ownCategoryId]);
+  const scopedProducts = ownIds
+    ? allProducts.filter((product) => Boolean(product.categoryId && ownIds.has(product.categoryId)))
     : categorySlug ? allProducts.filter((product) => categoryForProduct(product) === categorySlug) : allProducts;
   const withoutBrand = scopedProducts
     .filter((product) => !first(params.donors) || (product.donorId && first(params.donors)!.split(",").includes(product.donorId)))
@@ -122,12 +143,34 @@ export function createCatalogListing(homepage: HomepageData, params: SearchParam
     // Раньше фильтр марки знал один Mercedes и ничего не отсеивал: после W213
     // в тормозах всплывали колодки W204 и Camry.
     .filter((product) => !carDonorIds || Boolean(product.donorId && carDonorIds.includes(product.donorId)));
-  const products = withoutBrand.filter((product) => !filters.brands.length || filters.brands.includes(product.brand));
+  // Характеристики: значение совпадает с любым из выбранных. Деталь без значения под фильтр не попадает.
+  const selected = attrSelections(params);
+  const matchesAttrs = (product: Product, skip?: string) => [...selected].every(([key, wanted]) => key === skip || wanted.includes(attrText(product.attrs?.[key])));
+  const products = withoutBrand.filter((product) => (!filters.brands.length || filters.brands.includes(product.brand)) && matchesAttrs(product));
+  // Счётчик значения считается с остальными выбранными фильтрами, но без своего собственного:
+  // иначе после выбора 320 мм все другие диаметры показывали бы ноль.
+  const brandScoped = withoutBrand.filter((product) => !filters.brands.length || filters.brands.includes(product.brand));
+  const attrFacets: AttrFacet[] = attrTemplates.filter((template) => template.filterable).map((template) => {
+    const counts = new Map<string, number>();
+    for (const product of brandScoped) {
+      if (!matchesAttrs(product, template.key)) continue;
+      const value = attrText(product.attrs?.[template.key]);
+      if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
+    }
+    const chosen = selected.get(template.key) ?? [];
+    return {
+      key: template.key, label: template.labelRu,
+      values: [...counts].map(([value, count]) => ({ value, count, checked: chosen.includes(value),
+        label: formatValue(template, template.kind === "number" ? Number(value) : template.kind === "bool" ? value === "true" : value) }))
+        .sort((left, right) => template.kind === "number" ? Number(left.value) - Number(right.value) : left.label.localeCompare(right.label, "ru")),
+    };
+  }).filter((facet) => facet.values.length > 0);
   // В фильтр попадают только настоящие бренды деталей. Деталь без бренда владелец ещё
   // не дозаполнил — пустую строку в список выбора ставить нельзя, выбрать её нечем.
-  const brandFacets = [...new Set(withoutBrand.map((product) => product.brand).filter(Boolean))]
+  const brandBase = withoutBrand.filter((product) => matchesAttrs(product));
+  const brandFacets = [...new Set(brandBase.map((product) => product.brand).filter(Boolean))]
     .map((brand) => {
-      const matches = withoutBrand.filter((product) => product.brand === brand);
+      const matches = brandBase.filter((product) => product.brand === brand);
       const prices = matches.map((product) => product.priceMdl).filter((price): price is number => price !== null);
       return { count: matches.length, fromPrice: prices.length ? Math.min(...prices) : null, name: brand };
     })
@@ -144,6 +187,7 @@ export function createCatalogListing(homepage: HomepageData, params: SearchParam
   return {
     availableCount: scopedProducts.filter(isAvailable).length,
     brandFacets,
+    attrFacets,
     categories: homepage.categories,
     filters: { ...filters, page },
     pageCount,

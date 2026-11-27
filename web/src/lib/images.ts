@@ -72,3 +72,43 @@ export async function encodeImage(value: string, maxBytes: number): Promise<Enco
   if (bytes.length > maxBytes) throw new ImageRejected(`Картинка тяжелее ${Math.round(maxBytes / 1000)} КБ после сжатия.`);
   return { bytes, extension: "webp" };
 }
+
+/**
+ * Три размера фото детали (П7): оригинал до 2000 px (крупный план — до 3000),
+ * превью 400 px для списков и миниатюра 96 px для ленты в галерее.
+ * Превью в списке должно весить меньше 15 КБ: если не уложилось, качество снижается ступенями.
+ */
+export type PartImageSet = { full: Buffer; preview: Buffer; thumb: Buffer };
+
+export const previewBudget = 15_000;
+
+export async function encodePartImage(value: string, closeup: boolean): Promise<PartImageSet> {
+  const match = dataUrl.exec(value);
+  if (!match) throw new ImageRejected("Неверный формат картинки.");
+  const input = Buffer.from(match[2], "base64");
+  const limit = closeup ? 6_000_000 : 4_000_000;
+  if (input.length > limit * 2) throw new ImageRejected(`Картинка тяжелее ${Math.round(limit / 1_000_000)} МБ.`);
+  let meta: Metadata;
+  try { meta = await sharp(input, { limitInputPixels: maxInputPixels }).metadata(); }
+  catch { throw new ImageRejected("Не удалось прочитать картинку."); }
+  if (!meta.format || !accepted.has(meta.format) || !meta.width || !meta.height) throw new ImageRejected("Неверный формат картинки.");
+  if (meta.width * meta.height > maxInputPixels) throw new ImageRejected("Картинка слишком большая.");
+  const base = () => sharp(input, { limitInputPixels: maxInputPixels, animated: false }).rotate();
+  try {
+    const side = closeup ? 3000 : 2000;
+    const full = await base().resize({ width: side, height: side, fit: "inside", withoutEnlargement: true }).webp({ quality: 82, effort: 4 }).toBuffer();
+    // Сначала снижаем качество на 400 px; если кадр очень «пёстрый» и всё равно тяжелее 15 КБ —
+    // уменьшаем сторону. Обычное фото детали укладывается уже на первых ступенях.
+    let preview = Buffer.alloc(0);
+    search: for (const side of [400, 360, 320, 280, 240]) {
+      for (const quality of [72, 62, 52, 42, 34, 26, 20]) {
+        preview = await base().resize({ width: side, height: side, fit: "inside", withoutEnlargement: true }).webp({ quality, effort: 6 }).toBuffer();
+        if (preview.length <= previewBudget) break search;
+      }
+    }
+    const thumb = await base().resize({ width: 96, height: 96, fit: "cover" }).webp({ quality: 60, effort: 5 }).toBuffer();
+    return { full, preview, thumb };
+  } catch {
+    throw new ImageRejected("Не удалось обработать картинку.");
+  }
+}

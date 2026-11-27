@@ -323,6 +323,9 @@ export async function updateSettings(actor: Staff, input: Record<string, unknown
   const pickupHours = input.pickupHours;
   const operatorHours = input.operatorHours;
   const rate = input.rubPerMdl === "" ? null : Number(input.rubPerMdl);
+  // Срок возврата б/у детали в днях: на карточке «Возврат N дня». Пусто — оставить прежний.
+  const returnDays = input.returnDays === undefined || input.returnDays === "" ? current.returnDays : Number(input.returnDays);
+  if (!Number.isInteger(returnDays) || returnDays < 0 || returnDays > 60) throw new Error("Срок возврата — от 0 до 60 дней.");
   const phonePmr = input.phonePmr;
   const phoneMoldova = input.phoneMoldova;
   const viber = input.viberUrl;
@@ -345,6 +348,7 @@ export async function updateSettings(actor: Staff, input: Record<string, unknown
     operatorStartHour: Number(operatorHours.slice(0, 2)),
     operatorEndHour: Number(operatorHours.split("-")[1]?.slice(0, 2)),
     rubPerMdl: rate,
+    returnDays,
     phones: { pmr: normalizePhone(phonePmr), moldova: normalizePhone(phoneMoldova) },
     messengers: { viber, telegram }, socials, receipt,
   };

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
-import type { BrandFacet, CatalogFilters, SearchParamsRecord } from "@/lib/catalog-listing";
+import type { AttrFacet, BrandFacet, CatalogFilters, SearchParamsRecord } from "@/lib/catalog-listing";
 import type { Category } from "@/domain/catalog";
 
 export type CarOption = { slug: string; label: string };
@@ -15,6 +15,8 @@ type FilterFormProps = {
   action: string;
   baseParams: SearchParamsRecord;
   brands: BrandFacet[];
+  /** Характеристики со счётчиками: диаметр, вязкость, ёмкость — из шаблона категории. */
+  attrFacets?: AttrFacet[];
   cars: CarOption[];
   carSlug: string;
   filters: CatalogFilters;
@@ -29,7 +31,7 @@ const own = ["availability", "brand", "car", "delivery", "model", "page", "price
 
 function keptParams(params: SearchParamsRecord) {
   return Object.entries(params)
-    .filter(([key]) => !own.includes(key))
+    .filter(([key]) => !own.includes(key) && !key.startsWith("a_"))
     .flatMap(([key, value]) => (Array.isArray(value) ? value : [value]).filter(Boolean).map((entry) => ({ key, value: entry as string })));
 }
 
@@ -45,7 +47,7 @@ function queryOf(form: HTMLFormElement) {
 
 const field = "h-10 w-full min-w-0 rounded-ui border border-line bg-white px-3 text-body text-ink outline-none focus:border-accent";
 
-export function CatalogFilterForm({ action, baseParams, brands, cars, carSlug, filters, onDone, scope, total }: FilterFormProps) {
+export function CatalogFilterForm({ action, attrFacets = [], baseParams, brands, cars, carSlug, filters, onDone, scope, total }: FilterFormProps) {
   const router = useRouter();
   const form = useRef<HTMLFormElement>(null);
   const [count, setCount] = useState(total);
@@ -97,6 +99,13 @@ export function CatalogFilterForm({ action, baseParams, brands, cars, carSlug, f
         <span className="shrink-0 text-meta text-ink-2">{brand.count}</span>
       </label>)}
     </fieldset> : null}
+    {attrFacets.map((facet) => <fieldset className="grid min-w-0 gap-2" data-attr-facet={facet.key} key={facet.key}><legend className="text-body font-bold text-ink">{facet.label}</legend>
+      {facet.values.map((item) => <label className="flex min-w-0 cursor-pointer items-start gap-2 text-body text-ink" key={item.value}>
+        <input className="mt-1 shrink-0" defaultChecked={item.checked} name={`a_${facet.key}`} type="checkbox" value={item.value} />
+        <span className="min-w-0 flex-1 break-words">{item.label}</span>
+        <span className="shrink-0 text-meta text-ink-2" data-facet-count>{item.count}</span>
+      </label>)}
+    </fieldset>)}
     <fieldset className="grid min-w-0 gap-2"><legend className="text-body font-bold text-ink">Наличие</legend>
       <label className="flex items-center gap-2 text-body text-ink"><input defaultChecked={filters.availability === "in_stock"} name="availability" type="checkbox" value="in_stock" />В наличии</label>
     </fieldset>

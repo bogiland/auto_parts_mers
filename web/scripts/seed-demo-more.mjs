@@ -150,6 +150,38 @@ async function seed() {
       report.parts++;
     }
   }
+  // Тормоза для W212 из основного демонабора: без них путь «W212 → тормоза» давал ноль.
+  // Номера, размеры и диаметр не заполняются — их внесут с самих деталей.
+  const w212 = await one("SELECT id, make, model, generation, model_id FROM donors WHERE id = 'demo-donor-0'");
+  if (w212) {
+    const brakes = [
+      ["tormoznye-diski", "type-tormoznye-diski", "Тормозной диск", "", "front", 1450],
+      ["tormoznye-diski", "type-tormoznye-diski", "Тормозной диск", "", "rear", 1100],
+      ["demo-pads-front", "demo-type-brake-pads", "Колодки", "", "front", 650],
+      ["supporty-i-skoby", "type-supporty-i-skoby", "Суппорт", "left", "front", 1900],
+      ["datchiki-abs", "type-datchiki-abs", "Датчик ABS", "right", "front", 450],
+    ];
+    const title = `${w212.make} ${w212.model} ${w212.generation}`;
+    for (const [index, [categorySlug, typeId, typeName, side, position, price]] of brakes.entries()) {
+      const partId = `demo2-part-w212-brakes-${index}`;
+      if (await one("SELECT id FROM catalog_products WHERE id = $1", [partId])) continue;
+      const category = await one("SELECT id FROM ref_categories WHERE slug = $1", [categorySlug]);
+      const type = await one("SELECT id, return_restricted FROM ref_part_types WHERE id = $1", [typeId]);
+      if (!category) { report.skipped.push(`нет раздела /${categorySlug}`); continue; }
+      sku += 1;
+      const nameRu = `${typeName}${sideRu[side]}${positionRu[position]} ${title}`.replace(/\s+/g, " ").trim();
+      await db.query(
+        `INSERT INTO catalog_products
+          (id,name,name_ro,slug,sku,oem_number,price_mdl,price_mode,stock,condition,donor_id,part_type_id,category_id,model_id,
+           location,side,position,applicability,return_restricted,photos_json,hidden,created_at,demo_tag)
+         VALUES ($1,$2,'',$3,$4,NULL,$5,'fixed',1,'good',$6,$7,$8,$9,'L-W212',$10,$11,$12,$13,'[]',0,$14,$15)`,
+        [partId, nameRu, `demo2-w212-brakes-${index + 1}`, `DEMO2-${String(sku).padStart(4, "0")}`, price, w212.id, type?.id ?? null, category.id,
+          w212.model_id, side, position, title, Number(type?.return_restricted ?? 0), now, tag]);
+      await db.query("INSERT INTO part_offers (id,product_id,supplier,supplier_name,price_mdl,stock,lead_days,created_at) VALUES ($1,$2,'own','Свой склад',$3,1,0,$4) ON CONFLICT DO NOTHING",
+        [`demo2-offer-w212-brakes-${index}`, partId, price, now]);
+      report.parts++;
+    }
+  }
   return report;
 }
 

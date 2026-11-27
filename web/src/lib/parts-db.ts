@@ -5,6 +5,11 @@ import { randomBytes } from "node:crypto";
 import { audit, type Staff } from "@/lib/staff-db";
 import { listPartTypes, partName, partNameRo, saveImage, slugify, type PartType } from "@/lib/reference-db";
 import { parsePhotos, type Photo } from "@/lib/photos";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { encodePartImage } from "@/lib/images";
+import { AttrError, cleanAttrs, cleanCrossNumbers, nameHint, templatesFor, type Attrs, type CrossNumber } from "@/lib/attributes";
+import { categoryPath, listAttrTemplates } from "@/lib/attributes-db";
 
 type Row = Record<string, string | number | null>;
 
@@ -106,24 +111,48 @@ return (await transaction(async () => {
 // Обрезка и сжатие идут в браузере, но полагаться на это нельзя: запрос отправляют и в обход
 // страницы. Поэтому сервер разбирает каждый кадр заново и пишет свой WebP (`lib/images`) —
 // так отсекаются переименованные файлы и холсты-«бомбы», а EXIF с координатами не сохраняется.
-async function normalizePhotos(value: unknown, limit: number): Promise<Photo[]> {
+//
+// Фото детали пишется в трёх размерах (оригинал, превью 400, миниатюра 96) с понятным именем:
+// fara-levaya-mercedes-benz-e-klass-w212-a2128200339-1.webp — по нему картинку находит поиск.
+async function normalizePhotos(value: unknown, limit: number, naming?: { name: string; oem: string }): Promise<Photo[]> {
   if (value === undefined || value === null) return [];
   if (!Array.isArray(value)) throw new Error("Неверный список фото.");
   if (value.length > limit) throw new Error(`Можно загрузить до ${limit} фото.`);
   const stored: Photo[] = [];
-  for (const item of value) {
+  for (const [index, item] of value.entries()) {
     const photo = typeof item === "string" ? { src: item, closeup: false, preview: "" } : (item as Photo);
     const closeup = Boolean(photo?.closeup);
-    const src = await saveImage(String(photo?.src ?? ""), closeup ? 1_600_000 : 900_000);
-    if (!src) throw new Error("Одно из фото пустое.");
-    stored.push({ src, closeup, preview: photo?.preview ? await saveImage(String(photo.preview), 120_000) : "" });
+    const raw = String(photo?.src ?? "");
+    if (!raw) throw new Error("Одно из фото пустое.");
+    if (raw.startsWith("/uploads/") || raw.startsWith("/images/")) {
+      // Уже сохранённое фото: оставляем как есть вместе с его превью и миниатюрой.
+      stored.push({ src: raw, closeup, preview: String(photo?.preview ?? ""), thumb: String(photo?.thumb ?? "") });
+      continue;
+    }
+    if (!naming) {
+      stored.push({ src: await saveImage(raw, closeup ? 1_600_000 : 900_000), closeup, preview: photo?.preview ? await saveImage(String(photo.preview), 120_000) : "" });
+      continue;
+    }
+    const set = await encodePartImage(raw, closeup);
+    const trim = (value: string) => value.replace(/^-+|-+$/g, "");
+    const base = [trim(slugify(naming.name).slice(0, 50)), trim(slugify(naming.oem).slice(0, 20))].filter(Boolean).join("-") || "detal";
+    const directory = path.join(process.cwd(), "public", "uploads", "parts");
+    mkdirSync(directory, { recursive: true });
+    let name = `${base}-${index + 1}`;
+    for (let attempt = 2; existsSync(path.join(directory, `${name}.webp`)); attempt += 1) name = `${base}-${index + 1}-${attempt}`;
+    writeFileSync(path.join(directory, `${name}.webp`), set.full, { flag: "wx" });
+    writeFileSync(path.join(directory, `${name}-400.webp`), set.preview, { flag: "wx" });
+    writeFileSync(path.join(directory, `${name}-96.webp`), set.thumb, { flag: "wx" });
+    stored.push({ src: `/uploads/parts/${name}.webp`, preview: `/uploads/parts/${name}-400.webp`, thumb: `/uploads/parts/${name}-96.webp`, closeup });
   }
   return stored;
 }
 
 export async function setPartPhotos(actor: Staff, id: string, value: unknown) {
 return (await transaction(async () => {
-  const photos = await normalizePhotos(value, 10);
+  const current = await legacyQuery.get<Row>("SELECT name, oem_number FROM catalog_products WHERE id=?", [id]);
+  if (!current) throw new Error("Деталь не найдена.");
+  const photos = await normalizePhotos(value, 10, { name: String(current.name), oem: String(current.oem_number ?? "") });
   const result = (await legacyQuery.run<Row>("UPDATE catalog_products SET photos_json=? WHERE id=?", [JSON.stringify(photos), id]));
   if (!result.changes) throw new Error("Деталь не найдена.");
   (await audit(actor, "Фото детали", `${id}: ${photos.length} фото`));
@@ -140,6 +169,12 @@ export type PartRow = {
   donorId: string | null; donorTitle: string; brandId: string | null; brandName: string; categoryId: string | null; partTypeId: string | null;
   side: string; position: string; includes: string; applicability: string;
   photos: Photo[]; returnRestricted: boolean; hidden: boolean; soldAt: string | null; createdAt: string;
+  /** П6: характеристики по шаблону, кросс-номера, состояние словами. */
+  attrs: Attrs; crossNumbers: CrossNumber[]; conditionNote: string;
+  /** Тип детали: название и флаги из справочника. «Без возврата» и «расходник» берутся оттуда. */
+  partTypeName: string; typeReturnRestricted: boolean; consumable: boolean;
+  /** Донор целиком: происхождение детали — марка, модель, кузов, год, мотор. */
+  donor: { make: string; model: string; generation: string; year: number | null; engine: string } | null;
 };
 
 function toPart(row: Row): PartRow {
@@ -154,12 +189,29 @@ function toPart(row: Row): PartRow {
     includes: String(row.includes ?? ""), applicability: String(row.applicability ?? ""), photos: parsePhotos(row.photos_json),
     returnRestricted: Number(row.return_restricted) === 1, hidden: Number(row.hidden ?? 0) === 1,
     soldAt: (row.sold_at as string | null) ?? null, createdAt: String(row.created_at ?? ""),
+    attrs: jsonObject(row.attrs), crossNumbers: jsonArray(row.cross_numbers) as CrossNumber[], conditionNote: String(row.condition_note ?? ""),
+    partTypeName: String(row.type_name ?? ""), typeReturnRestricted: Number(row.type_return ?? 0) === 1, consumable: Number(row.type_consumable ?? 0) === 1,
+    donor: row.donor_make ? { make: String(row.donor_make), model: String(row.donor_model ?? ""), generation: String(row.donor_generation ?? ""), year: row.donor_year === null || row.donor_year === undefined ? null : Number(row.donor_year), engine: String(row.donor_engine ?? "") } : null,
   };
+}
+
+function jsonObject(value: unknown): Attrs {
+  if (value && typeof value === "object" && !Array.isArray(value)) return value as Attrs;
+  if (typeof value === "string") { try { const parsed = JSON.parse(value); return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {}; } catch { return {}; } }
+  return {};
+}
+function jsonArray(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") { try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch { return []; } }
+  return [];
 }
 
 const partSelect = `SELECT p.*, (SELECT b.name FROM ref_brands b WHERE b.id = p.brand_id) AS brand_name, (SELECT CASE WHEN d.id IS NULL THEN '' ELSE
     trim(d.make || ' ' || d.model || ' ' || d.generation || ' ' || COALESCE(d.year::text,'')) END
-  FROM donors d WHERE d.id=p.donor_id) AS donor_title FROM catalog_products p`;
+  FROM donors d WHERE d.id=p.donor_id) AS donor_title,
+  d2.make AS donor_make, d2.model AS donor_model, d2.generation AS donor_generation, d2.year AS donor_year, d2.engine AS donor_engine,
+  t.name_ru AS type_name, t.return_restricted AS type_return, t.consumable AS type_consumable
+  FROM catalog_products p LEFT JOIN donors d2 ON d2.id = p.donor_id LEFT JOIN ref_part_types t ON t.id = p.part_type_id`;
 
 export type PartFilter = "all" | "no_photo" | "no_price" | "no_ro" | "no_stock" | "stale";
 
@@ -231,62 +283,69 @@ export async function findDuplicate(donorId: string, partTypeId: string, side: s
 
 export type NewPartResult = { id: string; sku: string; name: string; slug: string; donorId: string | null };
 
+/**
+ * Новая деталь. Обязательных полей четыре — их вносит отец с телефона за минуту:
+ * тип детали (из него сама ставится категория), бренд детали, хотя бы одно фото,
+ * цена или отметка «по запросу». Внутренний артикул NAA-000123 выдаётся сам.
+ * Всё остальное (OEM, кроссы, характеристики, состояние словами) необязательно и дозаполняется потом.
+ */
 export async function addPart(actor: Staff, input: Record<string, unknown>): Promise<NewPartResult> {
 return (await transaction(async () => {
   const typeId = text(input.partTypeId, 60, "Тип детали");
-  const type = typeId ? (await listPartTypes()).find((item) => item.id === typeId) ?? null : null;
-  if (typeId && !type) throw new Error("Тип детали не найден в справочнике.");
-  const side = type?.hasSide ? text(input.side, 10, "Сторона") : "";
-  const position = type?.hasPosition ? text(input.position, 10, "Положение") : "";
-  if (type?.hasSide && !["left", "right"].includes(side)) throw new Error("Укажите сторону: левая или правая.");
-  if (type?.hasPosition && !["front", "rear"].includes(position)) throw new Error("Укажите положение: перед или зад.");
+  if (!typeId) throw new Error("Выберите тип детали: из него сама поставится категория.");
+  const type = (await listPartTypes()).find((item) => item.id === typeId) ?? null;
+  if (!type) throw new Error("Тип детали не найден в справочнике.");
+  const brandId = await resolveBrand(input.brandId);
+  if (!brandId) throw new Error("Укажите бренд детали — производителя: Bosch, Zimmermann, Mercedes-Benz.");
+  if (!Array.isArray(input.photos) || input.photos.length < 1) throw new Error("Добавьте хотя бы одно фото детали.");
+  const side = type.hasSide ? text(input.side, 10, "Сторона") : "";
+  const position = type.hasPosition ? text(input.position, 10, "Положение") : "";
+  if (side && !["left", "right"].includes(side)) throw new Error("Сторона: левая или правая.");
+  if (position && !["front", "rear"].includes(position)) throw new Error("Положение: перед или зад.");
   const donorId = typeof input.donorId === "string" && input.donorId ? input.donorId : null;
   const donor = donorId ? (await donorById(donorId)) : null;
   if (donorId && !donor) throw new Error("Донор не найден.");
-  const condition = text(input.condition, 20, "Состояние", true);
-  if (!conditions.some((item) => item.id === condition)) throw new Error("Выберите состояние детали.");
+  // Состояние необязательно: не выбрали — карточка его просто не показывает.
+  const condition = text(input.condition, 20, "Состояние");
+  if (condition && !conditions.some((item) => item.id === condition)) throw new Error("Выберите состояние детали из списка.");
   const onRequest = input.priceOnRequest === true || input.priceOnRequest === "on";
   const price = onRequest ? null : integer(input.price, "Цена", 0, 10_000_000);
   if (!onRequest && price === null) throw new Error("Укажите цену или поставьте галочку «цена по запросу».");
   const stock = integer(input.stock, "Остаток", 0, 10_000) ?? 1;
   const location = text(input.location, 60, "Место на складе");
-  const auto = type ? composeNames(type, side, position, donor) : { ru: "", ro: "" };
-  // Для расходника без типа название вводят руками, для детали с донора оно собирается само.
+  const oem = text(input.oem, 40, "Номер OEM");
+  const conditionNote = text(input.conditionNote, 200, "Состояние словами");
+  const categoryId = (typeof input.categoryId === "string" && input.categoryId) || type.categoryId || null;
+  let attrs: Attrs, crossNumbers: CrossNumber[], hint: string;
+  try {
+    const templates = templatesFor(await listAttrTemplates(), await categoryPath(categoryId), typeId);
+    attrs = cleanAttrs(input.attrs, templates);
+    crossNumbers = cleanCrossNumbers(input.crossNumbers);
+    hint = nameHint("", templates, attrs);
+  } catch (error) { if (error instanceof AttrError) throw new Error(error.message); throw error; }
+  const auto = composeNames(type, side, position, donor);
   const extra = text(input.nameExtra, 80, "Уточнение");
-  const nameRu = text(input.nameRu, 160, "Название RU") || text(input.name, 160, "Название") || [auto.ru, extra].filter(Boolean).join(" ");
+  // Подсказка названия: тип + отмеченные характеристики + донор («Тормозной диск передний 320 мм вентилируемый W212»).
+  const suggested = [composeNames(type, side, position, null).ru, hint, extra, donor ? donorTitle(donor) : ""].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+  const nameRu = text(input.nameRu, 160, "Название RU") || text(input.name, 160, "Название") || suggested || auto.ru;
   const nameRo = text(input.nameRo, 160, "Название RO") || auto.ro;
-  if (nameRu.length < 3) throw new Error("Укажите тип детали или напишите название.");
-  const includes = text(input.includes, 300, "Что входит") || (type?.assembly ? type.assemblyIncludes : "");
+  const includes = text(input.includes, 300, "Что входит") || (type.assembly ? type.assemblyIncludes : "");
   const applicability = text(input.applicability, 300, "Применимость") || (donor ? donorTitle(donor) : "");
-  const categoryId = (typeof input.categoryId === "string" && input.categoryId) || type?.categoryId || null;
-  const returnRestricted = type?.returnRestricted || input.returnRestricted === true || input.returnRestricted === "on" ? 1 : 0;
-  const productType = type?.nameRu || text(input.productType, 80, "Вид детали");
-  // Бренд детали — производитель (Bosch, Zimmermann, Mercedes-Benz). Это не донор:
-  // донор — машина, с которой деталь снята, и он хранится отдельно в donor_id.
-  const brandId = await resolveBrand(input.brandId);
-  const photos = JSON.stringify(await normalizePhotos(input.photos, 10));
+  // «Без возврата» — с типа детали; новый расходник возврату не подлежит всегда.
+  const returnRestricted = type.returnRestricted || (condition === "new" && type.consumable) || input.returnRestricted === true || input.returnRestricted === "on" ? 1 : 0;
+  const photos = JSON.stringify(await normalizePhotos(input.photos, 10, { name: nameRu, oem }));
 
   const id = `part-${randomBytes(8).toString("hex")}`;
   const sku = (await nextSku());
   const slug = (await uniqueSlug(slugify(nameRu)));
-  
-  
-  try {
-    (await legacyQuery.run<Row>(`INSERT INTO catalog_products
-      (id,name,name_ro,slug,sku,price_mdl,stock,price_mode,return_restricted,product_type,category_id,part_type_id,model_id,
-       donor_id,brand_id,condition,location,side,position,includes,applicability,photos_json,hidden,created_at)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?)`, [id, nameRu, nameRo, slug, sku, price, stock, onRequest ? "on_request" : "fixed", returnRestricted, productType || null, categoryId, typeId || null, donor?.modelId ?? null, donorId, brandId, condition, location, side, position, includes, applicability, photos, now()]));
-    // Сегодня предложение одно — свой склад. Таблица предложений позволит позже добавить поставщиков,
-    // не трогая деталь: у каждого будет своя цена, остаток и срок.
-    (await legacyQuery.run<Row>("INSERT INTO part_offers(id,product_id,supplier,supplier_name,price_mdl,stock,lead_days,created_at) VALUES(?,?,'own','Свой склад',?,?,0,?)", [newId("offer"), id, price, stock, now()]));
-    
-  } catch (error) {
-    
-    throw error;
-  }
-  (await audit(actor, "Добавление детали", `${sku} ${id}: ${nameRu}`));
+  await legacyQuery.run<Row>(`INSERT INTO catalog_products
+    (id,name,name_ro,slug,sku,oem_number,price_mdl,stock,price_mode,return_restricted,product_type,category_id,part_type_id,model_id,
+     donor_id,brand_id,condition,location,side,position,includes,applicability,photos_json,hidden,created_at,attrs,cross_numbers,condition_note)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?)`, [id, nameRu, nameRo, slug, sku, oem || null, price, stock, onRequest ? "on_request" : "fixed", returnRestricted, type.nameRu, categoryId, typeId, donor?.modelId ?? null, donorId, brandId, condition || null, location, side, position, includes, applicability, photos, now(), JSON.stringify(attrs), JSON.stringify(crossNumbers), conditionNote]);
+  // Сегодня предложение одно — свой склад. Таблица предложений позволит позже добавить поставщиков.
+  await legacyQuery.run<Row>("INSERT INTO part_offers(id,product_id,supplier,supplier_name,price_mdl,stock,lead_days,created_at) VALUES(?,?,'own','Свой склад',?,?,0,?)", [newId("offer"), id, price, stock, now()]);
+  await audit(actor, "Добавление детали", `${sku} ${id}: ${nameRu}`);
   return { id, sku, name: nameRu, slug, donorId };
-
 }));
 }
 
@@ -304,8 +363,18 @@ return (await transaction(async () => {
   const location = text(input.location, 60, "Место на складе");
   // Бренд меняется только если его прислали: пустое поле в форме правки не стирает уже заведённый.
   const brandId = input.brandId === undefined ? before.brandId : await resolveBrand(input.brandId);
+  // Поля П6 меняются только если их прислали: старая форма без них ничего не стирает.
+  const oem = input.oem === undefined ? before.oem : text(input.oem, 40, "Номер OEM");
+  const conditionNote = input.conditionNote === undefined ? before.conditionNote : text(input.conditionNote, 200, "Состояние словами");
+  let attrs = before.attrs, crossNumbers = before.crossNumbers;
+  try {
+    if (input.attrs !== undefined) attrs = cleanAttrs(input.attrs, templatesFor(await listAttrTemplates(), await categoryPath(before.categoryId), before.partTypeId), before.attrs);
+    if (input.crossNumbers !== undefined) crossNumbers = cleanCrossNumbers(input.crossNumbers);
+  } catch (error) { if (error instanceof AttrError) throw new Error(error.message); throw error; }
+  const includes = input.includes === undefined ? before.includes : text(input.includes, 300, "Что входит");
+  const applicability = input.applicability === undefined ? before.applicability : text(input.applicability, 300, "Применимость");
   // Адрес страницы и артикул остаются прежними даже после переименования.
-  (await legacyQuery.run<Row>("UPDATE catalog_products SET name=?,name_ro=?,price_mdl=?,price_mode=?,stock=?,condition=?,location=?,includes=?,applicability=?,brand_id=? WHERE id=?", [nameRu, nameRo, price, onRequest ? "on_request" : "fixed", stock, condition, location, text(input.includes, 300, "Что входит"), text(input.applicability, 300, "Применимость"), brandId, id]));
+  (await legacyQuery.run<Row>("UPDATE catalog_products SET name=?,name_ro=?,price_mdl=?,price_mode=?,stock=?,condition=?,location=?,includes=?,applicability=?,brand_id=?,oem_number=?,condition_note=?,attrs=?,cross_numbers=? WHERE id=?", [nameRu, nameRo, price, onRequest ? "on_request" : "fixed", stock, condition, location, includes, applicability, brandId, oem || null, conditionNote, JSON.stringify(attrs), JSON.stringify(crossNumbers), id]));
   (await legacyQuery.run<Row>("UPDATE part_offers SET price_mdl=?,stock=? WHERE product_id=? AND supplier='own'", [price, stock, id]));
   (await audit(actor, "Правка детали", `${before.sku || id}: ${nameRu}`));
 

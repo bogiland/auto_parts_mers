@@ -69,6 +69,19 @@ export interface Product {
   categoryId?: string;
   location?: string;
   returnRestricted?: boolean;
+  /** П6: характеристики по шаблону и кросс-номера. */
+  attrs?: Record<string, string | number | boolean>;
+  crossNumbers?: { number: string; source: string }[];
+  /** Код состояния (new, good, defect, parts) и строка состояния от оператора. */
+  conditionId?: string;
+  conditionNote?: string;
+  partTypeId?: string;
+  /** Донор целиком — происхождение детали: «Снято с: W212 2013 2.2 CDI». */
+  donorCar?: { make: string; model: string; generation: string; year: number | null; engine: string };
+  /** Миниатюра 96 px для ленты галереи. */
+  thumbs?: string[];
+  /** Отметки «крупный план дефекта» по фото. */
+  closeups?: boolean[];
 }
 
 export interface Brand {

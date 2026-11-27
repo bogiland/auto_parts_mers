@@ -4,6 +4,7 @@
 //
 //   node qa/p2-escaping-check.mjs
 import { chromium } from "playwright";
+import sharp from "sharp";
 
 const BASE = "http://localhost:3000";
 const ORIGIN = BASE;
@@ -54,6 +55,8 @@ const owner = jar();
 }
 
 /* ---------- 1. Заводим данные ---------- */
+// С П6 у детали обязательны тип, бренд, фото и цена — без них сервер её не примет.
+const photo = `data:image/png;base64,${(await sharp({ create: { width: 64, height: 48, channels: 3, background: "#888" } }).png().toBuffer()).toString("base64")}`;
 const created = { parts: [], brands: [], orders: [], inquiries: [] };
 let written = 0, refused = 0;
 
@@ -70,7 +73,8 @@ for (const [index, payload] of payloads.entries()) {
     method: "POST",
     body: JSON.stringify({
       action: "add-product", name: `${TAG}P${index} ${payload}`, price: 100, stock: 1,
-      location: payload, includes: payload, applicability: payload, condition: "good",
+      partTypeId: "type-tormoznye-diski", brandId: "brand-febi", photos: [{ src: photo, closeup: false }],
+      location: payload, includes: payload, applicability: payload, conditionNote: payload, condition: "good",
     }),
   });
   if (part.status === 200) { created.parts.push((await part.json())?.id); written++; } else refused++;

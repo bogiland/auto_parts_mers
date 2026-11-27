@@ -15,6 +15,8 @@ import { allow, windows } from "@/lib/rate-limit";
 import { recordSearchMiss } from "@/lib/search-misses";
 import { selectedCar } from "@/lib/selected-car";
 import { showroomVehicles } from "@/lib/vehicles-db";
+import { categoryTree, listAttrTemplates } from "@/lib/attributes-db";
+import type { AttrTemplate } from "@/lib/attributes";
 
 type CatalogResultsPageProps = {
   categoryName?: string;
@@ -63,6 +65,7 @@ function removeChip(pathname: string, source: SearchParamsRecord, chip: Chip) {
 function clearFiltersUrl(pathname: string, source: SearchParamsRecord) {
   const params = toUrlSearchParams(source);
   filterKeys.forEach((key) => params.delete(key));
+  [...params.keys()].filter((key) => key.startsWith("a_")).forEach((key) => params.delete(key));
   return withParams(pathname, params);
 }
 
@@ -74,6 +77,16 @@ function activeChips(source: SearchParamsRecord): Chip[] {
     ...values("price_from").map((value) => ({ key: "price_from", label: `от ${value} L.` })),
     ...values("price_to").map((value) => ({ key: "price_to", label: `до ${value} L.` })),
   ];
+}
+
+/**
+ * Фильтры по характеристикам: все фильтруемые поля шаблона, по одному на ключ.
+ * Показываются только те, у которых в выдаче есть значения, — пустых фильтров не бывает.
+ */
+export function filterableTemplates(templates: AttrTemplate[]) {
+  const byKey = new Map<string, AttrTemplate>();
+  for (const template of templates) if (template.filterable && !byKey.has(template.key)) byKey.set(template.key, template);
+  return [...byKey.values()];
 }
 
 /** Откуда считать «Показать N»: та же область, что у страницы. */
@@ -88,8 +101,8 @@ function scopeOf(ownCategoryId?: string, categorySlug?: string) {
  * Машина берётся из адреса или куки и сужает выдачу до деталей с таких же доноров.
  */
 export async function CatalogResultsPage({ categoryName, categorySlug, homepage, intro, isSearch = false, ownCategoryId, searchParams, pathOverride }: CatalogResultsPageProps) {
-  const [{ car, explicit }, makes] = await Promise.all([selectedCar(searchParams), showroomVehicles()]);
-  const listing = createCatalogListing(homepage, searchParams, categorySlug, ownCategoryId, car?.donorIds);
+  const [{ car, explicit }, makes, templates, ownIds] = await Promise.all([selectedCar(searchParams), showroomVehicles(), listAttrTemplates(), ownCategoryId ? categoryTree(ownCategoryId) : Promise.resolve(undefined)]);
+  const listing = createCatalogListing(homepage, searchParams, categorySlug, ownIds, car?.donorIds, filterableTemplates(templates));
   const pathname = pathOverride ?? (isSearch ? "/search" : `/catalog/legkovye/${categorySlug}`);
   const chips = activeChips(searchParams);
   const clearFilters = clearFiltersUrl(pathname, searchParams);
@@ -110,7 +123,7 @@ export async function CatalogResultsPage({ categoryName, categorySlug, homepage,
   }
 
   const formProps = {
-    action: pathname, baseParams: searchParams, brands: listing.brandFacets, cars, carSlug: car?.slug ?? "",
+    action: pathname, baseParams: searchParams, brands: listing.brandFacets, attrFacets: listing.attrFacets, cars, carSlug: car?.slug ?? "",
     filters: listing.filters, scope: scopeOf(ownCategoryId, categorySlug), total: listing.total,
   };
 

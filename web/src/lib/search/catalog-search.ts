@@ -42,7 +42,10 @@ function productScore(product: Product, query: string) {
 }
 
 function uniqueBySku(items: Product[]) {
-  return [...new Map(items.map((item) => [`${item.sku}:${item.name}`, item])).values()];
+  // Одна деталь — одна подсказка: склад передаётся первым, поэтому оставляем первое вхождение id.
+  const seen = new Map<string, Product>();
+  for (const item of items) if (!seen.has(item.id)) seen.set(item.id, item);
+  return [...seen.values()];
 }
 
 export async function searchCatalog(query: string) {

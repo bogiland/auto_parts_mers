@@ -139,7 +139,14 @@ describe.sequential('CRM and Telegram on PostgreSQL',()=>{
  });
  it('Postgres repositories retain donor, product, pages and account behavior',async()=>{
   const parts=await import('./parts-db'),pages=await import('./pages-db'),accounts=await import('./customer-db');
-  const donorId=await parts.saveDonor(actor,{make:'QA',model:'Model',year:2013});const part=await parts.addPart(actor,{nameRu:'Фара PostgreSQL',condition:'good',price:700,stock:1,donorId});
+  // П6: обязательны тип детали, бренд, хотя бы одно фото и цена (или «по запросу»).
+  await db.run("INSERT INTO ref_part_types(id,name_ru,created_at) VALUES('qa-type','Фара',now()::text) ON CONFLICT DO NOTHING");
+  await db.run("INSERT INTO ref_brands(id,name,created_at) VALUES('qa-brand','QA Brand',now()::text) ON CONFLICT DO NOTHING");
+  const sharp=(await import('sharp')).default;const photo=`data:image/png;base64,${(await sharp({create:{width:64,height:48,channels:3,background:'#888'}}).png().toBuffer()).toString('base64')}`;
+  const donorId=await parts.saveDonor(actor,{make:'QA',model:'Model',year:2013});
+  await expect(parts.addPart(actor,{partTypeId:'qa-type',brandId:'qa-brand',photos:[],price:700,donorId})).rejects.toThrow('фото');
+  const part=await parts.addPart(actor,{nameRu:'Фара PostgreSQL',partTypeId:'qa-type',brandId:'qa-brand',photos:[{src:photo,closeup:false}],condition:'good',price:700,stock:1,donorId});
+  expect(part.sku).toMatch(/^NAA-\d{6}$/);
   expect((await parts.partById(part.id))?.donorTitle).toContain('2013');expect((await parts.partsOfDonor(donorId))).toHaveLength(1);
   const pageId=await pages.savePage(actor,{slug:'qa-page',titleRu:'Тестовая страница',bodyRu:'Текст'});await pages.setPageVisible(actor,pageId,false);expect(await pages.findPage('qa-page')).toBeNull();
   const account=await accounts.registerCustomer({name:'QA Customer',surname:'Test',email:'qa@naa.test',phone:'77700008',password:'QaPassword2026',agreed:true});expect(account.customer.id).toBeGreaterThan(0);expect(await accounts.loginCustomer('77700008','QaPassword2026')).not.toBeNull();

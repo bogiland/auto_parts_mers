@@ -4,6 +4,7 @@ import { cookieName, sameOrigin } from "@/lib/staff-auth";
 import { session } from "@/lib/staff-db";
 import { addPart, findDuplicate, saveDonor, setPartHidden, setPartPhotos, setPartPrice, updatePart } from "@/lib/parts-db";
 import { listStockMoves, sellOffline, undoStockMove } from "@/lib/orders-db";
+import { addFitment, fitmentsOf, removeFitment } from "@/lib/attributes-db";
 
 export const runtime = "nodejs";
 
@@ -26,6 +27,9 @@ export async function POST(request: Request) {
       case "undo-move": (await undoStockMove(actor, Number(body.id))); break;
       case "stock-moves": return json({ ok: true, moves: (await listStockMoves(typeof body.id === "string" ? body.id : undefined)) });
       case "check-duplicate": return json({ ok: true, duplicate: (await findDuplicate(String(body.donorId ?? ""), String(body.partTypeId ?? ""), String(body.side ?? ""))) });
+      case "fitments": return json({ ok: true, fitments: await fitmentsOf(String(body.id ?? "")) });
+      case "add-fitment": (await addFitment(actor, String(body.id ?? ""), body)); break;
+      case "remove-fitment": (await removeFitment(actor, Number(body.id))); break;
       default: return new Response(null, { status: 400 });
     }
     return json({ ok: true });

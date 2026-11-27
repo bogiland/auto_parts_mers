@@ -443,3 +443,68 @@ ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS product_id text;
 ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS oem text NOT NULL DEFAULT '';
 ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS donor text NOT NULL DEFAULT '';
 ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS search_query text NOT NULL DEFAULT '';
+
+/* ---------- П6: характеристики, кроссы, применимость ---------- */
+
+-- Шаблон характеристик. Привязан к категории (основной или вложенной) и, если нужно,
+-- к типу детали. Поля без категории и типа — общие для всех деталей (вес, габариты).
+-- Из одного шаблона собираются поля формы в админке, таблица на карточке, фильтры и подсказка названия.
+CREATE TABLE IF NOT EXISTS ref_attr_templates (
+  id text PRIMARY KEY,
+  category_id text REFERENCES ref_categories(id) ON DELETE CASCADE,
+  part_type_id text REFERENCES ref_part_types(id) ON DELETE CASCADE,
+  key text NOT NULL CHECK (key ~ '^[a-z][a-z0-9_]{0,39}$'),
+  label_ru text NOT NULL,
+  label_ro text NOT NULL DEFAULT '',
+  kind text NOT NULL CHECK (kind IN ('number', 'list', 'text', 'bool')),
+  unit text NOT NULL DEFAULT '',
+  options jsonb NOT NULL DEFAULT '[]'::jsonb,
+  filterable boolean NOT NULL DEFAULT false,
+  in_name boolean NOT NULL DEFAULT false,
+  sort_order integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ref_attr_templates_scope_key
+  ON ref_attr_templates (COALESCE(category_id, ''), COALESCE(part_type_id, ''), key);
+
+-- Значения характеристик. Пустой объект — карточка работает как раньше.
+ALTER TABLE catalog_products ADD COLUMN IF NOT EXISTS attrs jsonb NOT NULL DEFAULT '{}'::jsonb;
+CREATE INDEX IF NOT EXISTS catalog_products_attrs ON catalog_products USING gin (attrs jsonb_path_ops);
+-- Отдельные индексы — только по полям, которые реально фильтруют (диаметр диска, ёмкость АКБ, вязкость).
+CREATE INDEX IF NOT EXISTS catalog_products_attr_diameter ON catalog_products ((attrs->>'diameter_mm')) WHERE attrs ? 'diameter_mm';
+CREATE INDEX IF NOT EXISTS catalog_products_attr_capacity ON catalog_products ((attrs->>'capacity_ah')) WHERE attrs ? 'capacity_ah';
+CREATE INDEX IF NOT EXISTS catalog_products_attr_viscosity ON catalog_products ((attrs->>'viscosity')) WHERE attrs ? 'viscosity';
+
+-- Кросс-номера с источником: [{"number":"P50011","source":"Brembo"}].
+ALTER TABLE catalog_products ADD COLUMN IF NOT EXISTS cross_numbers jsonb NOT NULL DEFAULT '[]'::jsonb;
+-- Состояние словами от оператора: «скол на нижнем ухе, стекло целое».
+ALTER TABLE catalog_products ADD COLUMN IF NOT EXISTS condition_note text NOT NULL DEFAULT '';
+
+-- Новый расходник возврату не подлежит. Флаг стоит на типе детали.
+ALTER TABLE ref_part_types ADD COLUMN IF NOT EXISTS consumable integer NOT NULL DEFAULT 0;
+
+-- Применимость к другим машинам. Донор — это происхождение детали, а не обещание,
+-- что она подойдёт на другие кузова; такие кузова добавляет оператор с отметкой «проверено».
+CREATE TABLE IF NOT EXISTS part_fitments (
+  id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  product_id text NOT NULL REFERENCES catalog_products(id) ON DELETE CASCADE,
+  make text NOT NULL,
+  model text NOT NULL DEFAULT '',
+  generation text NOT NULL DEFAULT '',
+  year_from integer,
+  year_to integer,
+  engine text NOT NULL DEFAULT '',
+  verified boolean NOT NULL DEFAULT false,
+  verified_by text NOT NULL DEFAULT '',
+  note text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS part_fitments_product ON part_fitments (product_id);
+
+-- Сопутствующие категории: к диску — колодки и датчики, к маслу — фильтры.
+CREATE TABLE IF NOT EXISTS ref_related_categories (
+  category_id text NOT NULL REFERENCES ref_categories(id) ON DELETE CASCADE,
+  related_id text NOT NULL REFERENCES ref_categories(id) ON DELETE CASCADE,
+  sort_order integer NOT NULL DEFAULT 0,
+  PRIMARY KEY (category_id, related_id)
+);

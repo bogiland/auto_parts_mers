@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="Фото пришлём в Viber">
+  <rect width="400" height="400" fill="#f3f4f6"/>
+  <g fill="none" stroke="#9ca3af" stroke-width="10" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M120 150h36l16-24h56l16 24h36a12 12 0 0 1 12 12v96a12 12 0 0 1-12 12H120a12 12 0 0 1-12-12v-96a12 12 0 0 1 12-12z"/>
+    <circle cx="200" cy="208" r="36"/>
+  </g>
+  <text x="200" y="320" font-family="Roboto, Arial, sans-serif" font-size="24" font-weight="500" fill="#4b5563" text-anchor="middle">Фото пришлём в Viber</text>
+</svg>

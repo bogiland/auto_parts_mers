@@ -33,7 +33,7 @@ export type CategoryNode = { id: string; parentId: string | null; slug: string; 
 
 async function partCounts() {
   const counts = new Map<string, { parts: number; inStock: number }>();
-  const rows = await many("SELECT category_id, COUNT(*) AS parts, SUM(CASE WHEN stock > 0 THEN 1 ELSE 0 END) AS in_stock FROM catalog_products WHERE category_id IS NOT NULL GROUP BY category_id");
+  const rows = await many("SELECT category_id, COUNT(*) AS parts, SUM(CASE WHEN stock > 0 THEN 1 ELSE 0 END) AS in_stock FROM catalog_products WHERE category_id IS NOT NULL AND hidden = 0 GROUP BY category_id");
   for (const row of rows) counts.set(String(row.category_id), { parts: Number(row.parts), inStock: Number(row.in_stock ?? 0) });
   return counts;
 }
@@ -175,7 +175,9 @@ export async function deleteCategory(actor: Staff, id: string, moveTo: string | 
 
 /* ---------- Типы деталей ---------- */
 
-export type PartType = { id: string; nameRu: string; nameRo: string; categoryId: string | null; hasSide: boolean; hasPosition: boolean; assembly: boolean; assemblyIncludes: string; returnRestricted: boolean };
+export type PartType = { id: string; nameRu: string; nameRo: string; categoryId: string | null; hasSide: boolean; hasPosition: boolean; assembly: boolean; assemblyIncludes: string; returnRestricted: boolean;
+  /** Расходник: новая такая деталь возврату не подлежит (П6). */
+  consumable: boolean };
 
 export async function listPartTypes(): Promise<PartType[]> {
   await ensureSeeded();
@@ -186,6 +188,7 @@ export async function listPartTypes(): Promise<PartType[]> {
     hasSide: Number(row.has_side) === 1, hasPosition: Number(row.has_position) === 1,
     assembly: Number(row.assembly) === 1, assemblyIncludes: String(row.assembly_includes),
     returnRestricted: Number(row.return_restricted) === 1,
+    consumable: Number(row.consumable ?? 0) === 1,
   }));
 }
 
@@ -196,11 +199,11 @@ export async function savePartType(actor: Staff, input: Record<string, unknown>)
   const includes = text(input.assemblyIncludes, 300, "Что входит в сборку");
   const categoryId = typeof input.categoryId === "string" && input.categoryId ? input.categoryId : null;
   if (categoryId && !(await one("SELECT id FROM ref_categories WHERE id = $1", [categoryId]))) throw new Error("Категория по умолчанию не найдена.");
-  const fields = [nameRu, nameRo, categoryId, flag(input.hasSide), flag(input.hasPosition), flag(input.assembly), includes, flag(input.returnRestricted)];
+  const fields = [nameRu, nameRo, categoryId, flag(input.hasSide), flag(input.hasPosition), flag(input.assembly), includes, flag(input.returnRestricted), flag(input.consumable)];
   if (id) {
     if (!(await one("SELECT id FROM ref_part_types WHERE id = $1", [id]))) throw new Error("Тип детали не найден.");
     await run(
-      "UPDATE ref_part_types SET name_ru=$1, name_ro=$2, category_id=$3, has_side=$4, has_position=$5, assembly=$6, assembly_includes=$7, return_restricted=$8 WHERE id=$9",
+      "UPDATE ref_part_types SET name_ru=$1, name_ro=$2, category_id=$3, has_side=$4, has_position=$5, assembly=$6, assembly_includes=$7, return_restricted=$8, consumable=$9 WHERE id=$10",
       [...fields, id],
     );
     await audit(actor, "Тип детали изменён", `${id}: ${nameRu}`);
@@ -210,8 +213,8 @@ export async function savePartType(actor: Staff, input: Record<string, unknown>)
   const created = newId("type");
   const next = await one<{ next: string }>("SELECT COALESCE(MAX(sort_order),0)+1 AS next FROM ref_part_types");
   await run(
-    `INSERT INTO ref_part_types (id,name_ru,name_ro,category_id,has_side,has_position,assembly,assembly_includes,return_restricted,sort_order,created_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+    `INSERT INTO ref_part_types (id,name_ru,name_ro,category_id,has_side,has_position,assembly,assembly_includes,return_restricted,consumable,sort_order,created_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
     [created, ...fields, Number(next?.next ?? 1), now()],
   );
   await audit(actor, "Тип детали создан", `${created}: ${nameRu}`);

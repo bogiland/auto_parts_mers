@@ -3,6 +3,8 @@ import { clientIp } from "@/lib/http";
 import { getLiveHomepage } from "@/lib/live-catalog";
 import { allow, tooMany, windows } from "@/lib/rate-limit";
 import { selectedCar } from "@/lib/selected-car";
+import { categoryTree, listAttrTemplates } from "@/lib/attributes-db";
+import { filterableTemplates } from "@/components/catalog/CatalogResultsPage";
 
 export const runtime = "nodejs";
 
@@ -22,7 +24,7 @@ export async function GET(request: Request) {
   const scope = String(url.searchParams.get("scope") ?? "all");
   const ownCategoryId = scope.startsWith("own:") ? scope.slice(4) : undefined;
   const categorySlug = scope.startsWith("slug:") ? scope.slice(5) : undefined;
-  const [homepage, { car }] = await Promise.all([getLiveHomepage(), selectedCar(params)]);
-  const listing = createCatalogListing(homepage, params, categorySlug, ownCategoryId, car?.donorIds);
+  const [homepage, { car }, templates, ownIds] = await Promise.all([getLiveHomepage(), selectedCar(params), listAttrTemplates(), ownCategoryId ? categoryTree(ownCategoryId) : Promise.resolve(undefined)]);
+  const listing = createCatalogListing(homepage, params, categorySlug, ownIds, car?.donorIds, filterableTemplates(templates));
   return Response.json({ total: listing.total }, { headers: { "Cache-Control": "no-store" } });
 }

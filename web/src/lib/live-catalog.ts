@@ -33,7 +33,8 @@ export async function ownCategoryGroups() {
   }));
 }
 
-const placeholder = "/images/products/neutral-placeholder.png";
+// Нет своих фото — честная заглушка, а не чужая деталь со стока.
+const placeholder = "/images/no-photo.png";
 
 /** Деталь из склада в том виде, в котором её показывает витрина. */
 export async function toStoreProduct(part: PartRow): Promise<Product> {
@@ -64,7 +65,16 @@ function mapStoreProduct(part: PartRow, rate: number | null, summary?: { average
     donor: part.donorTitle || undefined,
     donorId: part.donorId ?? undefined,
     categoryId: part.categoryId ?? undefined,
-    returnRestricted: part.returnRestricted,
+    // Без возврата: так помечен сам товар, его тип или это новый расходник.
+    returnRestricted: part.returnRestricted || part.typeReturnRestricted || (part.condition === "new" && part.consumable),
+    attrs: part.attrs,
+    crossNumbers: part.crossNumbers,
+    conditionId: part.condition || undefined,
+    conditionNote: part.conditionNote || undefined,
+    partTypeId: part.partTypeId ?? undefined,
+    donorCar: part.donor ?? undefined,
+    thumbs: part.photos.length ? part.photos.map((photo) => photo.thumb || photo.preview || photo.src) : undefined,
+    closeups: part.photos.length ? part.photos.map((photo) => photo.closeup) : undefined,
   };
 }
 

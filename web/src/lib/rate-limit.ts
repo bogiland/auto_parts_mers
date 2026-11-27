@@ -43,6 +43,8 @@ export const windows = {
   searchMissIp: { limit: 30, windowMs: 60_000 },
   /** Пересчёт «Показать N» при каждой галочке: щедро, но не бесконечно. */
   catalogCountIp: { limit: 120, windowMs: 60_000 },
+  /** Отзывы: проверочный пример слабее Turnstile, поэтому отправка ограничена и по адресу. */
+  reviewIp: { limit: 5, windowMs: 60_000 },
 } as const satisfies Record<string, Window>;
 
 /** 64-битный ключ блокировки из строки: pg_advisory_lock принимает только число. */

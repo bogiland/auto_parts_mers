@@ -151,3 +151,46 @@ ALTER TABLE inquiries ADD COLUMN IF NOT EXISTS search_query text NOT NULL DEFAUL
 | Строки журнала пустых поисков (A2128200339 и тестовые запросы) | 21 | `DELETE FROM search_misses WHERE demo_tag IS NULL AND requested_at >= '2026-11-26'` — только на локальной базе |
 | Детали `xss…` из проверки экранирования | 35 | Сняты с витрины (`hidden = 1`), из базы не удалялись |
 | Пароль тестового кабинета `p1-verify@example.invalid` и связанного сотрудника +373 60 ***11 | 1 | Сброшен заново на локальной базе для проверки П1; новый пароль выдаёт сама проверка (`P1_PASS_NOW`) |
+
+## П6–П7: характеристики, применимость, фото (27.11.2026)
+
+### SQL для прода
+
+Всё совместимо со старыми записями: характеристики, кроссы и состояние словами
+получают пустые значения по умолчанию, старая карточка выглядит и сохраняется как раньше.
+Новые таблицы и поля — в конце `web/db/schema.sql` (блок «П6»):
+
+```sql
+CREATE TABLE IF NOT EXISTS ref_attr_templates (...);          -- шаблон характеристик
+ALTER TABLE catalog_products ADD COLUMN IF NOT EXISTS attrs jsonb NOT NULL DEFAULT '{}'::jsonb;
+CREATE INDEX IF NOT EXISTS catalog_products_attrs ON catalog_products USING gin (attrs jsonb_path_ops);
+-- отдельные индексы только по фильтруемым полям: diameter_mm, capacity_ah, viscosity
+ALTER TABLE catalog_products ADD COLUMN IF NOT EXISTS cross_numbers jsonb NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE catalog_products ADD COLUMN IF NOT EXISTS condition_note text NOT NULL DEFAULT '';
+ALTER TABLE ref_part_types ADD COLUMN IF NOT EXISTS consumable integer NOT NULL DEFAULT 0;
+CREATE TABLE IF NOT EXISTS part_fitments (...);               -- применимость с отметкой «проверено»
+CREATE TABLE IF NOT EXISTS ref_related_categories (...);      -- сопутствующие категории
+```
+
+Порядок: снимок базы → `npm run db:migrate` → `npm run seed:attributes` → выкладка кода.
+На проде задать `OPERATIONS_SECRET` (без него не работает проверка в форме отзыва;
+в `.env.example` описано, как получить строку). В `config/checkout-settings.json` добавлен `returnDays: 2`.
+
+`seed:attributes` делает четыре вещи, все повторяемые:
+- заводит разделы «Подвеска → Амортизаторы и стойки» и «Колёса и шины» и типы «Амортизатор», «Шина», «Колёсный диск», «Колесо в сборе»;
+- заводит 39 полей шаблона, флаг «расходник» и 8 связей сопутствующих категорий;
+- у 12 стартовых товаров (`pads-w213`, `filter-om654` и т. д.) переносит номер из «артикула» в поле OEM и выдаёт внутренний артикул NAA-…;
+- ставит им тип, категорию, состояние «новая» и характеристики, взятые из их же названия: «5W-30, 5 л», «AGM 95 Ah», «R18».
+
+Трогает только строки без артикула.
+Откат: `npm run seed:attributes -- --clean`; новые разделы он не удаляет, если в них уже есть детали.
+
+### Записи, созданные проверками (только локальная база)
+
+| Запись | Сколько | Как откатить |
+|---|---|---|
+| Проверочные тормозные диски `demo_tag` = `p67-…` | 20 | Уже скрыты с витрины. Удалять после проверки, что их нет в заказах |
+| Их фото в `web/public/uploads/parts/` | 84 файла | Папка не в git (`.gitignore`), удалить вручную |
+| Тормоза W212 в демонаборе (`demo2-part-w212-brakes-0…4`) | 5 | `npm run seed:demo-more -- --clean` |
+| Детали `xss…` из повторной проверки экранирования | 7 | Скрыты с витрины |
+| Корзина и отзывы | — | Проверки в корзину ничего не оформляли, отзывы не отправляли |

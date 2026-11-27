@@ -49,6 +49,7 @@ export function PartTypes({ types, categories }: { types: PartType[]; categories
           {type.hasPosition && <span className="admin-chip">положение</span>}
           {type.assembly && <span className="admin-chip">бывает в сборе</span>}
           {type.returnRestricted && <span className="admin-chip" data-status="received">возврату не подлежит</span>}
+          {type.consumable && <span className="admin-chip" data-status="received">расходник: новый без возврата</span>}
         </div>
         <div className="admin-tree-actions">
           <button aria-label="Изменить" className="admin-icon-button" onClick={() => { setDraft({ ...type }); setError(""); }} type="button"><Pencil size={16} /></button>
@@ -75,6 +76,7 @@ export function PartTypes({ types, categories }: { types: PartType[]; categories
           <label className="admin-field admin-field-check"><input checked={draft.assembly} onChange={(event) => setDraft({ ...draft, assembly: event.target.checked })} type="checkbox" /><span>Бывает в сборе</span></label>
           {draft.assembly && <label className="admin-field admin-field-wide">Что входит в сборку<textarea onChange={(event) => setDraft({ ...draft, assemblyIncludes: event.target.value })} placeholder="Например: двигатель с навесным, стартер, генератор" rows={2} value={draft.assemblyIncludes} /></label>}
           <label className="admin-field admin-field-check"><input checked={draft.returnRestricted} onChange={(event) => setDraft({ ...draft, returnRestricted: event.target.checked })} type="checkbox" /><span>Возврату не подлежит — для двигателей, КПП и других агрегатов</span></label>
+          <label className="admin-field admin-field-check"><input checked={draft.consumable} onChange={(event) => setDraft({ ...draft, consumable: event.target.checked })} type="checkbox" /><span>Расходник — новая такая деталь возврату не подлежит (фильтры, масла, колодки)</span></label>
         </div>
         <p className="admin-note">Название детали получится такое: <strong>{sample(draft)}</strong></p>
         {error && <p className="admin-error" role="alert">{error}</p>}

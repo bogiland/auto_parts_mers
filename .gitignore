@@ -19,3 +19,4 @@ backups/
 # Приватные файлы (фото выдачи и осмотра)
 web/private-uploads/
 /package-lock.json
+web/public/uploads/

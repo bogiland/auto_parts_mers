@@ -22,7 +22,8 @@
     "db:migrate": "node scripts/db-migrate.mjs",
     "operations:worker": "node scripts/operations-worker.mjs",
     "test:operations": "vitest run src/lib/operations.integration.test.ts",
-    "telegram:setup": "node scripts/telegram-setup.mjs"
+    "telegram:setup": "node scripts/telegram-setup.mjs",
+    "seed:attributes": "node scripts/seed-attributes.mjs"
   },
   "dependencies": {
     "@types/pg": "^8.23.1",
