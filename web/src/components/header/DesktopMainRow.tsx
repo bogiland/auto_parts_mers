@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 
 import { CartBadge } from "@/components/cart/CartBadge";
+import { FavoritesBadge } from "@/components/favorites/FavoritesBadge";
 import { SearchBox, SearchBoxFallback } from "@/components/search/SearchBox";
 
 import { CatalogButton } from "./CatalogButton";
@@ -15,12 +16,13 @@ interface DesktopMainRowProps {
   account: { label: string; href: string };
 }
 
-function HeaderAction({ href, icon, label, badge = false }: { href: string; icon: ReactNode; label: string; badge?: boolean }) {
+function HeaderAction({ href, icon, label, badge = false, favorites = false }: { href: string; icon: ReactNode; label: string; badge?: boolean; favorites?: boolean }) {
   return (
     <Link aria-label={label} className="header-action flex shrink-0 flex-col items-center gap-1 text-meta font-medium text-white hover:text-accent" href={href}>
       <span className="relative">
         {icon}
         {badge ? <CartBadge /> : null}
+        {favorites ? <FavoritesBadge /> : null}
       </span>
       <span>{label}</span>
     </Link>
@@ -38,7 +40,7 @@ export function DesktopMainRow({ hours, account, categories }: DesktopMainRowPro
         <div className="header-desktop-search flex min-w-0 flex-1"><Suspense fallback={<SearchBoxFallback />}><SearchBox /></Suspense></div>
         <div className="ml-auto flex shrink-0 items-start gap-2">
           <HeaderAction href={account.href} icon={<UserRound aria-hidden="true" size={24} strokeWidth={1.8} />} label={account.label} />
-          <HeaderAction href="/favorites" icon={<Heart aria-hidden="true" size={24} strokeWidth={1.8} />} label="Избранное" />
+          <HeaderAction href="/favorites" icon={<Heart aria-hidden="true" size={24} strokeWidth={1.8} />} label="Избранное" favorites />
           <HeaderAction badge href="/cart" icon={<ShoppingCart aria-hidden="true" size={24} strokeWidth={1.8} />} label="Корзина" />
         </div>
         <span className="sr-only">График работы: {hours}</span>

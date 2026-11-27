@@ -97,7 +97,7 @@ for (const [index, payload] of payloads.entries()) {
     method: "POST",
     body: JSON.stringify({
       key: crypto.randomUUID(), name: `${TAG}O${index} ${payload}`, phone: `+3736090${String(4000 + index).slice(-4)}`,
-      contactMethod: "call", deliveryMethod: "local", address: `${payload} Слободзея`, paymentMethod: "receipt",
+      contactMethod: "call", deliveryMethod: "delivery", address: `${payload} Слободзея`, paymentMethod: "receipt",
       comment: payload, agreed: true, restrictedAgreed: true, items: [{ id: "demo-part-49", quantity: 1 }],
     }),
   }, ip);

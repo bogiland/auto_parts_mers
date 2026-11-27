@@ -13,7 +13,9 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
-  const homepage = await getLiveHomepage({ includeInventory: false });
-  const products = [...homepage.popularProducts, ...homepage.recommendedProducts];
+  // Корзина видит весь склад: раньше в ней были только стартовые товары, и деталь из админки
+  // (W212 и любая другая) показывалась как «Товар больше недоступен». Склад идёт последним и вытесняет дубли.
+  const homepage = await getLiveHomepage();
+  const products = [...new Map([...homepage.popularProducts, ...homepage.recommendedProducts, ...(homepage.liveProducts ?? [])].map((product) => [product.id, product])).values()];
   return <><SiteHeader hours={homepage.hours} phone={homepage.phone} /><CartPage products={products} /><SiteFooter /></>;
 }

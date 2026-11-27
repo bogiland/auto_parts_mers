@@ -16,7 +16,7 @@ export const metadata = { title: "Товарный чек — NAA.md", robots: {
 
 const when2 = (value: string) => new Intl.DateTimeFormat("ru-RU", { dateStyle: "short" }).format(new Date(value));
 
-const money = (value: number) => `${value.toLocaleString("ru-RU")} L.`;
+const money = (value: number) => `${value.toLocaleString("ru-RU")} руб.`;
 const when = (value: string) => new Intl.DateTimeFormat("ru-RU", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
 
 export default async function ReceiptPage({ params, searchParams }: Props) {
@@ -87,7 +87,7 @@ export default async function ReceiptPage({ params, searchParams }: Props) {
         <p>Детали: {money(receipt.goodsMdl)}</p>
         {receipt.deliveryMdl > 0 && <p>Доставка: {money(receipt.deliveryMdl)}</p>}
         <p className="text-price font-bold">Итого: {money(receipt.totalMdl)}</p>
-        {receipt.totalRub !== null && <p className="text-meta text-ink-2">≈ {receipt.totalRub.toLocaleString("ru-RU")} руб ПМР по курсу магазина{receipt.rubPerMdl ? ` (1 L. = ${receipt.rubPerMdl} руб)` : ""}</p>}
+        {receipt.totalRub !== null && <p className="text-meta text-ink-2">≈ {receipt.totalRub.toLocaleString("ru-RU")} руб ПМР по курсу магазина{receipt.rubPerMdl ? ` (1 руб. = ${receipt.rubPerMdl} руб)` : ""}</p>}
       </section>
 
       <section className="mt-6 border-t border-line pt-4">

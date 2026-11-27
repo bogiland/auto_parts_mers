@@ -62,7 +62,7 @@ export function PriceRequest({ product, className = "", label = "Узнать ц
   ].filter(Boolean);
 
   return <>
-    <button className={`flex h-9 items-center justify-center rounded-ui border border-accent px-3 text-btn font-bold text-accent hover:bg-accent hover:text-white ${className}`} data-price-request={product.id} onClick={() => setOpen(true)} type="button">{label}</button>
+    <button className={`flex h-11 items-center justify-center rounded-ui border border-accent px-3 text-btn font-bold text-accent hover:bg-accent hover:text-white ${className}`} data-price-request={product.id} onClick={() => setOpen(true)} type="button">{label}</button>
     <dialog aria-labelledby={`price-${product.id}`} className="m-auto w-full max-w-lg rounded-ui bg-white p-0 text-left backdrop:bg-ink/50" onClose={() => setOpen(false)} ref={dialog}>
       <div className="grid gap-4 p-4 xl:p-6">
         <div className="flex items-start justify-between gap-2">

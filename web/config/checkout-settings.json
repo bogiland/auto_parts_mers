@@ -6,11 +6,12 @@
   "operatorEndHour": 20,
   "timezone": "Europe/Chisinau",
   "returnDays": 2,
+  "baseCurrency": "rub",
+  "rates": { "usd": 16.5, "eur": 18.71, "mdl": 0.8414, "updatedAt": "" },
   "phones": { "pmr": "", "moldova": "" },
   "deliveryMethods": [
     { "id": "pickup", "title": "Самовывоз", "description": "Слободзея, ул. Новосовицкая 25, 9:00-18:00", "needsAddress": false },
-    { "id": "local", "title": "Доставка до 20 км", "description": "По договорённости", "needsAddress": true },
-    { "id": "carrier", "title": "Маршрутка или служба доставки", "description": "Платно, сумму уточнит оператор", "needsAddress": true }
+    { "id": "delivery", "title": "Доставка", "description": "В любую точку ПМР и Молдовы: маршруткой, нашей машиной или почтой. Способ и цену обговорим по телефону", "needsAddress": true }
   ],
   "paymentMethods": [
     { "id": "receipt", "title": "При получении" },

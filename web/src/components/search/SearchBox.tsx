@@ -66,7 +66,7 @@ export function SearchBox({ mobile = false }: SearchBoxProps) {
         id: `product-${product.id}`,
         image: product.thumb.url,
         label: product.name,
-        price: product.price ? `${product.price.toLocaleString("ru-RU")} L.` : "Уточнить цену",
+        price: product.price ? `${product.price.toLocaleString("ru-RU")} руб.` : "Уточнить цену",
       })),
       ...suggestions.categories.map((category) => ({ description: category.path, href: `/catalog/legkovye/${category.slug}?${categoryParams}`, id: `category-${category.slug}`, label: category.name })),
       ...suggestions.brands.map((brand) => ({ href: `/search?q=${encodeURIComponent(query)}&brand=${encodeURIComponent(brand.name)}&from_global=true`, id: `brand-${brand.slug}`, label: brand.name })),
@@ -179,7 +179,7 @@ export function SearchBox({ mobile = false }: SearchBoxProps) {
             {isLoading && !suggestions ? <div className="p-3" aria-label="Загрузка"><div className="h-10 animate-pulse rounded-ui bg-surface-2" /><div className="mt-2 h-10 animate-pulse rounded-ui bg-surface-2" /><div className="mt-2 h-10 animate-pulse rounded-ui bg-surface-2" /></div> : null}
             {!isLoading && suggestions?.products.length ? <div className="border-b border-line py-2"><p className="px-3 py-2 text-meta font-bold text-ink-2">Товары</p>{suggestions.products.map((product) => {
               const index = items.findIndex((item) => item.id === `product-${product.id}`);
-              return <Link aria-selected={activeIndex === index} className={`flex min-w-0 items-center gap-3 px-3 py-2 ${activeIndex === index ? "bg-surface-2" : "hover:bg-surface-2"}`} href={`/products/${product.slug}`} id={`${listId}-product-${product.id}`} key={product.id} onClick={close} role="option"><div className="relative h-10 w-10 shrink-0"><Image alt="" className="object-contain" fill sizes="40px" src={product.thumb.url} /></div><div className="min-w-0 flex-1"><p className="truncate text-body text-ink"><Highlight query={query} value={product.name} /></p><p className="truncate text-meta text-ink-2">{product.brand} · {product.sku}</p></div><span className="shrink-0 text-meta font-bold text-accent">{product.price ? `${product.price.toLocaleString("ru-RU")} L.` : "Уточнить цену"}</span></Link>;
+              return <Link aria-selected={activeIndex === index} className={`flex min-w-0 items-center gap-3 px-3 py-2 ${activeIndex === index ? "bg-surface-2" : "hover:bg-surface-2"}`} href={`/products/${product.slug}`} id={`${listId}-product-${product.id}`} key={product.id} onClick={close} role="option"><div className="relative h-10 w-10 shrink-0"><Image alt="" className="object-contain" fill sizes="40px" src={product.thumb.url} /></div><div className="min-w-0 flex-1"><p className="truncate text-body text-ink"><Highlight query={query} value={product.name} /></p><p className="truncate text-meta text-ink-2">{product.brand} · {product.sku}</p></div><span className="shrink-0 text-meta font-bold text-accent">{product.price ? `${product.price.toLocaleString("ru-RU")} руб.` : "Уточнить цену"}</span></Link>;
             })}</div> : null}
             {!isLoading && suggestions?.categories.length ? <div className="border-b border-line py-2"><p className="px-3 py-2 text-meta font-bold text-ink-2">Категории</p>{suggestions.categories.map((category) => {
               const index = items.findIndex((item) => item.id === `category-${category.slug}`);

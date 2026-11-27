@@ -270,7 +270,7 @@ return (await transaction(async () => {
   if (!Number.isSafeInteger(value) || value < 0 || value > 1_000_000) throw new Error("Проверьте стоимость доставки.");
   (await lockedRow(id, version));
   (await legacyQuery.run<Row>("UPDATE orders SET delivery_cost_mdl=?, delivery_cost_agreed=true, version=version+1 WHERE id=?", [value, id]));
-  (await audit(actor, "Стоимость доставки", `№ ${id + 1000}: ${value} L.`));
+  (await audit(actor, "Стоимость доставки", `№ ${id + 1000}: ${value} руб.`));
 
 }));
 }
@@ -395,10 +395,9 @@ return (await transaction(async () => {
       const product = (await legacyQuery.get<Row>("SELECT * FROM catalog_products WHERE id=?", [id]));
       if (!product) throw new Error("Одна из деталей не найдена.");
       if (product.price_mdl === null) throw new Error(`У «${product.name}» нет цены — сначала поставьте цену.`);
-      const rate = settings.rubPerMdl;
       lines.push({
         id, name: String(product.name), quantity, priceMdl: discountedPrice(Number(product.price_mdl),discount),
-        priceRub: product.price_rub !== null ? discountedPrice(Number(product.price_rub),discount) : rate !== null && rate > 0 ? Math.round(discountedPrice(Number(product.price_mdl),discount) * rate) : null,
+        priceRub: null,
         cost: product.cost_mdl === null ? null : Number(product.cost_mdl),
       });
     }
@@ -413,7 +412,7 @@ return (await transaction(async () => {
     for (const line of lines) await legacyQuery.run<Row>("INSERT INTO order_items(order_id,product_id,name,quantity,unit_price_mdl,unit_price_rub,unit_cost_mdl) VALUES(?,?,?,?,?,?,?)", [created, line.id, line.name, line.quantity, line.priceMdl, line.priceRub, line.cost]);
     (await legacyQuery.run<Row>("INSERT INTO order_status_history(order_id,from_status,to_status,actor_name,comment,at) VALUES(?,?,?,?,?,?)", [created, "", "received", actor.name, "Заказ принят по телефону", now()]));
     
-    (await audit(actor, "Заказ по телефону", `№ ${created + 1000}: ${lines.length} поз., ${totalMdl} L.`));
+    (await audit(actor, "Заказ по телефону", `№ ${created + 1000}: ${lines.length} поз., ${totalMdl} руб.`));
     return { id: created, number: created + 1000 };
   } catch (error) {
     
@@ -464,7 +463,7 @@ return (await transaction(async () => {
     return { src: await savePrivateImage(String(photo?.src ?? ""), 900_000), closeup: Boolean(photo?.closeup) };
   }))).filter((photo) => photo.src) : [];
   (await legacyQuery.run<Row>("INSERT INTO order_returns(order_id,product_id,product_name,inspection,photos_json,decision,amount_mdl,reason,actor_name,at) VALUES(?,?,?,?,?,?,?,?,?,?)", [orderId, productId, item.name, (typeof input.inspection === "string" ? input.inspection.trim() : "").slice(0, 1000), JSON.stringify(photos), decision, amount, reason, actor.name, now()]));
-  (await audit(actor, "Решение по возврату", `№ ${order.number}: ${item.name} — ${returnDecisions.find((option) => option.id === decision)?.label}, ${amount} L.`));
+  (await audit(actor, "Решение по возврату", `№ ${order.number}: ${item.name} — ${returnDecisions.find((option) => option.id === decision)?.label}, ${amount} руб.`));
 
 }));
 }
@@ -580,7 +579,7 @@ return (await transaction(async () => {
 
 /* ---------- Сообщение клиенту ---------- */
 
-const money = (value: number) => `${value.toLocaleString("ru-RU")} L.`;
+const money = (value: number) => `${value.toLocaleString("ru-RU")} руб.`;
 
 /** Готовый текст для Viber или Telegram: оператор копирует и отправляет. */
 export function messageTemplates(order: OrderDetail, settings: CheckoutSettings) {

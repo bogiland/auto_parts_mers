@@ -306,7 +306,7 @@ export function AddPartWizard({ donors, types, categories, makes, locations, typ
             <input autoCapitalize="characters" onChange={(event) => setOem(event.target.value)} placeholder="A212 820 03 39" value={oem} />
             <span className="admin-note">Сфотографируйте табличку с номером. Это номер на самой детали — по нему ищут в Google.</span>
           </label>
-          <label className="admin-field">Цена, L.<input disabled={onRequest} min="0" onChange={(event) => setPrice(event.target.value)} type="number" value={price} /></label>
+          <label className="admin-field">Цена, руб.<input disabled={onRequest} min="0" onChange={(event) => setPrice(event.target.value)} type="number" value={price} /></label>
           <label className="admin-field admin-field-check"><input checked={onRequest} onChange={(event) => setOnRequest(event.target.checked)} type="checkbox" />Цена по запросу</label>
           <label className="admin-field">Остаток<input min="0" onChange={(event) => setStock(event.target.value)} type="number" value={stock} /></label>
           <label className="admin-field">Место на складе<input list="wizard-locations" onChange={(event) => setLocation(event.target.value)} placeholder="Стеллаж Б, полка 3" value={location} /></label>
@@ -340,7 +340,7 @@ export function AddPartWizard({ donors, types, categories, makes, locations, typ
           <li>Фото: {photos.length}{photos.some((photo) => photo.closeup) ? ", есть крупный план" : ""}</li>
           <li>Донор: {donor ? donorLabel(donor) : "не указан"}</li>
           <li>Состояние: {conditions.find((item) => item.id === condition)?.label}</li>
-          <li>Цена: {onRequest ? "по запросу" : `${Number(price || 0).toLocaleString("ru-RU")} L.`}</li>
+          <li>Цена: {onRequest ? "по запросу" : `${Number(price || 0).toLocaleString("ru-RU")} руб.`}</li>
           <li>Бренд: {brands.find((brand) => brand.id === brandId)?.name ?? "не выбран"}{oem ? ` · OEM ${oem}` : ""}</li>
           <li>Остаток: {stock}{location ? ` · место ${location}` : ""}</li>
           <li>Артикул выдаст система при сохранении и больше не изменит</li>

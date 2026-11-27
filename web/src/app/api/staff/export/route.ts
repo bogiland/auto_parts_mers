@@ -19,7 +19,7 @@ export async function GET() {
     return Response.json({ message: "Подтвердите выгрузку паролем.", needConfirm: "export" }, { status: 403, headers: { "Cache-Control": "no-store" } });
   }
   const rows = (await exportOrders());
-  const lines = ["Номер,Дата,Статус,Имя,Телефон,Получение,Сумма L.", ...rows.map((row) => [Number(row.id) + 1000, row.created_at, row.status, row.name, row.phone, row.delivery_title, row.total_mdl].map(csv).join(","))];
+  const lines = ["Номер,Дата,Статус,Имя,Телефон,Получение,Сумма, руб.", ...rows.map((row) => [Number(row.id) + 1000, row.created_at, row.status, row.name, row.phone, row.delivery_title, row.total_mdl].map(csv).join(","))];
   (await audit(staff, "Экспорт заказов", `${rows.length} строк`));
   return new Response(`﻿${lines.join("\r\n")}`, {
     headers: {

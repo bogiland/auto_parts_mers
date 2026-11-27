@@ -1,4 +1,5 @@
 import "server-only";
+import { notDemo } from "@/lib/demo";
 
 import { randomBytes } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -33,7 +34,7 @@ export type CategoryNode = { id: string; parentId: string | null; slug: string; 
 
 async function partCounts() {
   const counts = new Map<string, { parts: number; inStock: number }>();
-  const rows = await many("SELECT category_id, COUNT(*) AS parts, SUM(CASE WHEN stock > 0 THEN 1 ELSE 0 END) AS in_stock FROM catalog_products WHERE category_id IS NOT NULL AND hidden = 0 GROUP BY category_id");
+  const rows = await many(`SELECT category_id, COUNT(*) AS parts, SUM(CASE WHEN stock > 0 THEN 1 ELSE 0 END) AS in_stock FROM catalog_products WHERE category_id IS NOT NULL AND hidden = 0 AND sku IS NOT NULL AND ${notDemo()} GROUP BY category_id`);
   for (const row of rows) counts.set(String(row.category_id), { parts: Number(row.parts), inStock: Number(row.in_stock ?? 0) });
   return counts;
 }

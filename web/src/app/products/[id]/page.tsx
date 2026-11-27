@@ -13,6 +13,7 @@ import { ReviewsBlock } from "@/components/reviews/ReviewsBlock";
 import { AdSlot } from "@/components/ads/AdSlot";
 import { rating } from "@/lib/reviews";
 import { selectedCar } from "@/lib/selected-car";
+import { showDemo } from "@/lib/demo";
 import { getSettings } from "@/lib/checkout-db";
 import { categoryPath, fitmentsOf, listAttrTemplates, relatedCategories } from "@/lib/attributes-db";
 import { formatAttrs, templatesFor } from "@/lib/attributes";
@@ -51,7 +52,8 @@ export default async function ProductPage({ params }: PageProps<"/products/[id]"
   // Склад — единственный источник: если деталь заведена в базе, карточка берёт данные оттуда
   // (тип, характеристики, донор, состояние). Стартовая витрина — только запасной вариант.
   const own = (await partByPublicId(id));
-  const product: Product | undefined = own && !own.hidden && own.sku ? await toStoreProduct(own) : starters.find((item) => item.id === id || item.sku === id);
+  // Демо-деталь на боевом сервере (NAA_SHOW_DEMO не задан) не открывается — как скрытая.
+  const product: Product | undefined = own && !own.hidden && own.sku && (showDemo() || !own.demo) ? await toStoreProduct(own) : starters.find((item) => item.id === id || item.sku === id);
 
   if (!product) {
     // Старый адрес дубля ведёт на основную карточку: ссылки из переписки и поиска
@@ -107,7 +109,7 @@ export default async function ProductPage({ params }: PageProps<"/products/[id]"
         <ProductDetails car={car} facts={facts} key={product.id} product={product} />
         {related.length ? <section className="min-w-0" data-related>
           <SectionHeader title="Вместе с этой деталью берут" />
-          <div className="flex min-w-0 flex-wrap gap-2">{related.map((item) => <Link className="rounded-ui bg-surface-2 px-3 py-2 text-body font-bold text-ink hover:text-accent" href={`${item.parentSlug ? categoryBasePath(item.parentSlug) : "/catalog/legkovye"}/${item.slug}${carQuery}`} key={item.id}>{item.name}{targetCar ? ` для ${targetCar.label}` : ""}</Link>)}</div>
+          <div className="flex min-w-0 flex-wrap gap-2">{related.map((item) => <Link className="inline-flex min-h-11 items-center rounded-ui bg-surface-2 px-3 text-body font-bold text-ink hover:text-accent" href={`${item.parentSlug ? categoryBasePath(item.parentSlug) : "/catalog/legkovye"}/${item.slug}${carQuery}`} key={item.id}>{item.name}{targetCar ? ` для ${targetCar.label}` : ""}</Link>)}</div>
         </section> : null}
         {sameDonor.length ? <section className="min-w-0" data-same-donor>
           <SectionHeader href={own?.donorId ? `/donors/${own.donorId}` : undefined} linkText="Все детали с этой машины" title="Ещё с этого донора" />

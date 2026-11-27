@@ -43,7 +43,7 @@ describe.sequential('CRM and Telegram on PostgreSQL',()=>{
  it('call → offer → order is one client and one timeline',async()=>{
   caseId=await crm.call(actor,{phone:'077700002',name:'QA Client',need:'Фара',source:'call'});
   const list=await crm.cases();expect(list.find(k=>k.id===caseId)?.phone).toBe('+37377700002');
-  const text=await crm.offer(actor,caseId,[product]);expect(text).toContain('500 MDL');expect(text).toContain(`/products/${product}`);
+  const text=await crm.offer(actor,caseId,[product]);expect(text).toContain('500 руб.');expect(text).toContain(`/products/${product}`);
   const result=await orders.createCallOrder(actor,{phone:'77700002',name:'QA Client',items:[{id:product,quantity:1}]});orderId=result.id;
   const detail=await crm.clientDetail((await crm.cases()).find(k=>k.id===caseId)!.client_id);expect(detail.cases).toHaveLength(1);expect(detail.orders).toHaveLength(1);expect(detail.events.some(e=>e.title==='Предложение подготовлено')).toBe(true);
  });
@@ -153,7 +153,7 @@ describe.sequential('CRM and Telegram on PostgreSQL',()=>{
  });
  it('STO discount is applied to offers and orders on the server',async()=>{
   const id=await crm.call(actor,{phone:'77700009',name:'СТО',need:'Фара',source:'call'}),clientId=(await crm.cases()).find(k=>k.id===id)!.client_id;
-  await crm.saveClient(actor,{id:clientId,name:'СТО',kind:'sto',discount:10});expect(await crm.offer(actor,id,[product])).toContain('450 MDL');
+  await crm.saveClient(actor,{id:clientId,name:'СТО',kind:'sto',discount:10});expect(await crm.offer(actor,id,[product])).toContain('450 руб.');
   const o=await orders.createCallOrder(actor,{phone:'77700009',items:[{id:product,quantity:1}]});expect((await orders.orderDetail(o.id))?.totalMdl).toBe(450);
  });
  it('outbox retains failed sends and retries',async()=>{

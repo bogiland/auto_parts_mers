@@ -176,7 +176,7 @@ function PartEditor({ part, categories, moves, error, run, onClose, templates, b
         <label className="admin-field admin-field-wide">Название, русский<input onChange={(event) => setNameRu(event.target.value)} value={nameRu} /></label>
         <label className="admin-field admin-field-wide">Название, румынский<input onChange={(event) => setNameRo(event.target.value)} value={nameRo} /></label>
         <label className="admin-field">Состояние<select onChange={(event) => setCondition(event.target.value)} value={condition}>{conditions.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
-        <label className="admin-field">Цена, L.<input disabled={onRequest} min="0" onChange={(event) => setPrice(event.target.value)} type="number" value={price} /></label>
+        <label className="admin-field">Цена, руб.<input disabled={onRequest} min="0" onChange={(event) => setPrice(event.target.value)} type="number" value={price} /></label>
         <label className="admin-field admin-field-check"><input checked={onRequest} onChange={(event) => setOnRequest(event.target.checked)} type="checkbox" />Цена по запросу</label>
         <label className="admin-field">Остаток<input min="0" onChange={(event) => setStock(event.target.value)} type="number" value={stock} /></label>
         <label className="admin-field">Место на складе<input onChange={(event) => setLocation(event.target.value)} value={location} /></label>

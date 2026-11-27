@@ -12,8 +12,8 @@ export const messengerPhoneLabel = "+373 777 45 636";
 export function ContactLine() {
   return <div className="flex min-w-0 flex-wrap items-center gap-2 text-meta text-ink-2">
     <span>Пишите на русском или румынском:</span>
-    <a className="inline-flex h-8 items-center rounded-ui border border-line bg-white px-3 font-bold text-ink hover:text-accent" href={`viber://chat?number=${encodeURIComponent(messengerPhone)}`}>Viber</a>
-    <a className="inline-flex h-8 items-center rounded-ui border border-line bg-white px-3 font-bold text-ink hover:text-accent" href={`https://t.me/${messengerPhone}`} rel="noreferrer" target="_blank">Telegram</a>
+    <a className="inline-flex h-11 items-center rounded-ui border border-line bg-white px-3 font-bold text-ink hover:text-accent" href={`viber://chat?number=${encodeURIComponent(messengerPhone)}`}>Viber</a>
+    <a className="inline-flex h-11 items-center rounded-ui border border-line bg-white px-3 font-bold text-ink hover:text-accent" href={`https://t.me/${messengerPhone}`} rel="noreferrer" target="_blank">Telegram</a>
     <span>{messengerPhoneLabel}</span>
   </div>;
 }

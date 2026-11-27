@@ -207,3 +207,70 @@ CREATE TABLE IF NOT EXISTS ref_related_categories (...);      -- сопутст�
 | Воздушный фильтр: коды двигателя OM654, кроссы Mahle и Blue Print, W205 и W213 «по номеру, не сверено» | то же |
 | Салонный фильтр: новый номер A2058352700, W205 2015–2021 «не сверено» | то же |
 | Масляный фильтр: OM654, кросс Hengst E159H; диск W205: кросс Brembo 09.B769.5S; свечи: кросс Bosch ZR6SII3320, двигатели M272/M273/M278/M157 «не сверено» | то же |
+
+## П8–П9: рубль ПМР, курсы, чистка витрины (27.11.2026)
+
+### SQL и команды для прода
+
+Порядок: снимок базы (`pg_dump -Fc`) → `npm run db:migrate` → `npm run migrate:rub` (предпросмотр) →
+`npm run migrate:rub -- --apply` → выкладка кода. Код без перевода цен показывал бы рубли на суммах в леях,
+поэтому перевод — до выкладки, в одно окно.
+
+Схема (конец `web/db/schema.sql`, совместимо со старыми записями — только новая таблица):
+
+```sql
+CREATE TABLE IF NOT EXISTS currency_migration_log (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  table_name text NOT NULL, row_id text NOT NULL, column_name text NOT NULL,
+  old_value integer NOT NULL, rate numeric(12,6) NOT NULL, new_value integer NOT NULL,
+  migrated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (table_name, row_id, column_name)
+);
+```
+
+Что делает `migrate:rub -- --apply` (одна транзакция, под advisory-lock, повторный запуск ничего не делает):
+
+```sql
+-- для каждой денежной колонки: catalog_products.price_mdl, cost_mdl; part_offers.price_mdl;
+-- orders.total_mdl, delivery_cost_mdl; order_items.unit_price_mdl, unit_cost_mdl;
+-- order_returns.amount_mdl; ad_banners.price_mdl; ad_slot_settings.price_mdl
+INSERT INTO currency_migration_log(table_name,row_id,column_name,old_value,rate,new_value)
+  SELECT '<таблица>', <ключ>::text, '<колонка>', <колонка>, 0.8414, ROUND(<колонка> * 0.8414::numeric)
+  FROM <таблица> WHERE <колонка> IS NOT NULL;
+UPDATE <таблица> SET <колонка> = ROUND(<колонка> * 0.8414::numeric) WHERE <колонка> IS NOT NULL;
+-- настройки: baseCurrency = 'rub', rates = {usd 16.5, eur 18.71, mdl 0.8414, updatedAt}, rubPerMdl = null
+-- страница «Оплата»: фраза про леи в тексте и в SEO-описании заменена на «…в рублях ПМР»
+```
+
+Колонки `*_mdl` сохранили имена (на них завязаны индексы, выгрузки и журнал), но теперь хранят рубли ПМР.
+Курс берётся из `settings.rates.mdl`, если его нет — стартовый 0,8414 из «Ответов владельца».
+
+Откат перевода:
+
+```sql
+UPDATE catalog_products t SET price_mdl = l.old_value FROM currency_migration_log l
+ WHERE l.table_name = 'catalog_products' AND l.column_name = 'price_mdl' AND l.row_id = t.id;
+-- так же для остальных колонок; затем в settings убрать baseCurrency
+```
+
+Проверка на локальной базе: 2210 значений; цены деталей 331 707 L × 0,8414 = 279 098, в базе 279 094 руб.
+(разница — округление каждой цены до рубля, не больше 0,5 руб. на строку). Дамп до перевода — в папке сессии,
+не в git.
+
+Демо скрывается признаком окружения: на проде `NAA_SHOW_DEMO` не задавать (или пусто) — строки с
+`demo_tag` `naa-demo…` не попадают на витрину, в поиск и в карту сайта. Сид не меняется.
+
+### Откат тестовых записей (П9, только локальная база)
+
+`node web/qa/p9-rollback.mjs` — предпросмотр, `--apply` — выполнить. Откат идёт штатными операциями
+админки от владельца, строки не удаляются: остаток возвращается обратным движением склада, каждый шаг
+пишется в историю заказа и журнал.
+
+| Что | Как |
+|---|---|
+| Активные заказы аудиторов и проверок | «Отменён» с комментарием «Откат тестовых записей перед запуском (П9)» |
+| Выданные заказы | Ссылка на чек отзывается, затем «Возврат» — деталь возвращается на склад |
+| Открытые заявки | «Закрыта» |
+| Бренды `xss…` | Удалены через справочник |
+| Детали NAA-000036…39, `xss…`, `p67-…`, `p2p3-…` | Скрыты с витрины |
+| Журнал пустых поисков проверок с 26.11.2026 | `DELETE` только на локальной базе |

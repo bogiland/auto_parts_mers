@@ -3,12 +3,12 @@ import { describe, expect, it } from "vitest";
 import { getHomepage } from "@/lib/catalog-gateway";
 
 describe("getHomepage", () => {
-  it("returns two enabled Mercedes slides in display order", async () => {
+  it("returns two enabled slides in display order", async () => {
     const homepage = await getHomepage();
 
     expect(homepage.heroSlides).toHaveLength(2);
     expect(homepage.heroSlides.every((slide) => slide.isEnabled)).toBe(true);
-    expect(homepage.heroSlides[0]?.ctaHref).toBe("/catalog/legkovye/mercedes-benz");
+    expect(homepage.heroSlides[0]?.ctaHref).toBe("/#car-picker");
   });
 
   it("returns visible category data", async () => {

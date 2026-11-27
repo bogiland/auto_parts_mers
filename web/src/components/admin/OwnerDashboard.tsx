@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { one } from "@/lib/db";
+import { getSettings } from "@/lib/checkout-db";
 
 type Metrics = { revenue: string; orders: string; gross: string; missing: string; returns: string };
 const periods = [{ id: "7", label: "7 дней", days: 7 }, { id: "30", label: "30 дней", days: 30 }, { id: "90", label: "Квартал", days: 90 }, { id: "365", label: "Год", days: 365 }];
-const money = (n: number) => `${n.toLocaleString("ru-RU")} MDL`;
+const money = (n: number) => `${n.toLocaleString("ru-RU")} руб.`;
 const currentTime = () => Date.now();
 
 async function metrics(from: string, to: string) {
@@ -18,6 +19,11 @@ async function metrics(from: string, to: string) {
 export async function OwnerDashboard({ period }: { period?: string }) {
   const selected = periods.find(p => p.id === period) ?? periods[1]!;
   const now = currentTime(), span = selected.days * 86400000;
+  // Курс старше 30 дней — сигнал владельцу: цены в USD/EUR и румынская версия считаются по нему.
+  const rates = ((await getSettings()) as { rates?: { updatedAt?: string } }).rates;
+  const ratesTime = rates?.updatedAt ? new Date(rates.updatedAt).getTime() : 0;
+  const ratesStale = !ratesTime || currentTime() - ratesTime > 30 * 24 * 60 * 60 * 1000;
+  const ratesDate = ratesTime ? new Date(ratesTime).toLocaleDateString("ru-RU") : "";
   const [current, previous, alerts] = await Promise.all([
     metrics(new Date(now - span).toISOString(), new Date(now + 1).toISOString()),
     metrics(new Date(now - 2 * span).toISOString(), new Date(now - span).toISOString()),
@@ -37,6 +43,6 @@ export async function OwnerDashboard({ period }: { period?: string }) {
   return <div className="admin-list"><nav className="admin-tabs" aria-label="Период">{periods.map(p => <Link className={p.id === selected.id ? "is-active" : ""} href={`/admin/dashboard?period=${p.id}`} key={p.id}>{p.label}</Link>)}</nav>
     <p className="admin-muted">Сравнение с предыдущими {selected.days} днями. Выручка учитывает заказы в статусе «Выдан»; возвращённые заказы исключены целиком.</p>
     <div className="admin-grid">{rows.map(row => <div className="admin-card admin-stat" key={row.label}><small>{row.label}</small><strong>{row.monetary ? money(row.value) : row.value}</strong><p className="admin-muted">Предыдущий период: {row.monetary ? money(row.previous) : row.previous}{row.note ? ` · ${row.note}` : ""}</p></div>)}</div>
-    <h2>Требует внимания</h2><div className="admin-grid"><Link className="admin-card" href="/admin/orders">Новые заказы старше 2 часов: {Number(alerts?.overdue ?? 0)}</Link><Link className="admin-card" href="/admin/inventory">Без фото: {Number(alerts?.no_photo ?? 0)} · без цены: {Number(alerts?.no_price ?? 0)} · без RO: {Number(alerts?.no_ro ?? 0)}</Link></div>
+    <h2>Требует внимания</h2><div className="admin-grid">{ratesStale ? <Link className="admin-card admin-warning" data-rates-stale href="/admin/settings">Курсы валют не обновлялись больше 30 дней{ratesDate ? ` (с ${ratesDate})` : ""}. Проверьте USD, EUR и MDL.</Link> : null}<Link className="admin-card" href="/admin/orders">Новые заказы старше 2 часов: {Number(alerts?.overdue ?? 0)}</Link><Link className="admin-card" href="/admin/inventory">Без фото: {Number(alerts?.no_photo ?? 0)} · без цены: {Number(alerts?.no_price ?? 0)} · без RO: {Number(alerts?.no_ro ?? 0)}</Link></div>
   </div>;
 }

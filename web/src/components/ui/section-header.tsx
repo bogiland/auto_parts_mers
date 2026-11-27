@@ -12,7 +12,7 @@ export function SectionHeader({ title, href, linkText }: SectionHeaderProps) {
   return (
     <div className="mb-4 flex items-baseline justify-between gap-4">
       <SectionTitle className="mb-0">{title}</SectionTitle>
-      {href && linkText ? <Link className="text-body text-ink-2 hover:text-accent inline-flex items-center gap-2 shrink-0" href={href}>{linkText}<ArrowRight aria-hidden="true" size={16} /></Link> : null}
+      {href && linkText ? <Link className="text-body text-ink-2 hover:text-accent inline-flex min-h-11 items-center gap-2 shrink-0" href={href}>{linkText}<ArrowRight aria-hidden="true" size={16} /></Link> : null}
     </div>
   );
 }

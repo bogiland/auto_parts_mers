@@ -7,8 +7,9 @@ import { useEffect, useState } from "react";
 import type { Product } from "@/domain/catalog";
 import { cartCount, clearCart, removeCartItem, restoreCartItem, retryCart, setCartQuantity, useCart, type CartItem } from "@/lib/cart-store";
 
-const lei = (value: number) => `${value.toLocaleString("ru-RU")} L.`;
-const rub = (value: number) => `${value.toLocaleString("ru-RU")} руб`;
+import { formatRub } from "@/lib/money";
+
+const lei = formatRub;
 
 export function CartPage({ products }: { products: Product[] }) {
   const cart = useCart();
@@ -18,8 +19,6 @@ export function CartPage({ products }: { products: Product[] }) {
   const available = rows.filter(({ product }) => product && product.stock !== 0 && product.priceMode === "fixed" && product.priceMdl !== null);
   const count = available.reduce((total, { item, product }) => total + Math.min(item.quantity, product?.stock ?? 1), 0);
   const total = available.reduce((sum, { item, product }) => sum + (product?.priceMdl ?? 0) * Math.min(item.quantity, product?.stock ?? 1), 0);
-  const hasRub = available.length > 0 && available.every(({ product }) => product?.priceRub !== undefined);
-  const rubTotal = hasRub ? available.reduce((sum, { item, product }) => sum + (product?.priceRub ?? 0) * Math.min(item.quantity, product?.stock ?? 1), 0) : null;
 
   useEffect(() => {
     if (!undone) return;
@@ -49,25 +48,26 @@ export function CartPage({ products }: { products: Product[] }) {
               <div className="min-w-0 flex-1">
                 {sold ? <span className="rounded-badge bg-surface-2 px-2 py-1 text-badge font-bold text-ink-2">Продано</span> : null}
                 {product ? <Link className="block text-body font-bold hover:text-accent" href={`/products/${product.id}`}>{product.name}</Link> : <span className="text-body font-bold">Товар больше недоступен</span>}
-                {product ? <p className="mt-1 text-meta text-ink-2">{product.condition ?? "Состояние уточнит оператор"} · OEM {product.sku}</p> : null}
+                {product ? <p className="mt-1 text-meta text-ink-2" data-cart-condition>{[product.condition, product.conditionNote, product.oem ? `OEM ${product.oem}` : "", `арт. ${product.sku}`].filter(Boolean).join(" · ")}</p> : null}
                 {product?.donor ? <p className="mt-1 text-meta text-ink-2">Донор: {product.donor}</p> : null}
                 {!sold ? <p className="mt-2 text-meta text-success">В наличии{product.stock !== undefined ? `, ${product.stock} шт.` : " — уточнит оператор"}</p> : null}
               </div>
               <div className="flex shrink-0 flex-col items-end gap-2">
-                {!sold && product?.priceMdl !== null ? <><strong className="text-price">{lei((product?.priceMdl ?? 0) * quantity)}</strong>{product?.priceRub !== undefined ? <span className="text-meta text-ink-2">≈ {rub(product.priceRub * quantity)}</span> : null}</> : null}
-                <button aria-label={`Удалить ${product?.name ?? "товар"}`} className="text-ink-2 hover:text-accent" onClick={() => remove(item)} type="button"><Trash2 size={18} /></button>
+                {!sold && product?.priceMdl !== null ? <strong className="text-price">{lei((product?.priceMdl ?? 0) * quantity)}</strong> : null}
               </div>
             </div>
             <div className="mt-3 flex items-center justify-between gap-3 border-t border-line pt-3">
               {sold ? <Link className="text-body font-bold text-accent" href="/catalog/legkovye">Найти похожий</Link> : max > 1 && product ? <div aria-label="Количество" className="flex h-9 items-center rounded-ui border border-line text-body"><button aria-label="Уменьшить количество" className="grid h-9 w-9 place-items-center disabled:text-ink-3" disabled={quantity <= 1} onClick={() => setCartQuantity(product, quantity - 1)} type="button"><Minus size={16} /></button><span className="min-w-8 text-center">{quantity}</span><button aria-label="Увеличить количество" className="grid h-9 w-9 place-items-center disabled:text-ink-3" disabled={quantity >= max} onClick={() => setCartQuantity(product, quantity + 1)} title={quantity >= max ? "Больше нет в наличии" : undefined} type="button"><Plus size={16} /></button></div> : <span className="text-body">1 шт.</span>}
               {product?.stock !== undefined && item.quantity > max && !sold ? <span className="text-meta text-accent">Осталось {max} шт.</span> : null}
+              {/* «Удалить» — 44 px и внизу карточки товара, далеко от «Очистить корзину» вверху списка. */}
+              <button aria-label={`Удалить ${product?.name ?? "товар"}`} className="ml-auto inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-ui px-3 text-body text-ink-2 hover:bg-surface-2 hover:text-accent" data-cart-remove onClick={() => remove(item)} type="button"><Trash2 aria-hidden="true" size={18} /><span>Удалить</span></button>
             </div>
           </article>;
         })}
       </div>
       <aside className="fixed inset-x-0 bottom-tabbar z-40 self-start border border-line bg-white p-4 shadow-card desktop:sticky desktop:top-6 desktop:bottom-auto desktop:rounded-ui desktop:shadow-none">
-        <div className="flex justify-between gap-3 text-body"><span>Товары ({count})</span><span>{lei(total)}{rubTotal !== null ? <span className="block text-right text-meta text-ink-2">≈ {rub(rubTotal)}</span> : null}</span></div>
-        <div className="mt-4 flex justify-between gap-3 text-body"><span>Доставка</span><span className="text-right text-ink-2">Уточнит оператор</span></div>
+        <div className="flex justify-between gap-3 text-body"><span>Товары ({count})</span><span>{lei(total)}</span></div>
+        <div className="mt-4 flex justify-between gap-3 text-body"><span>Доставка</span><span className="text-right text-ink-2">Самовывоз бесплатно, доставку обговорим по телефону</span></div>
         <div className="mt-4 flex justify-between border-t border-line pt-4 text-price font-bold"><span>Итого</span><span>{lei(total)}</span></div>
         <Link aria-disabled={!count} className={`mt-4 flex h-control w-full items-center justify-center rounded-ui bg-accent text-btn font-bold text-white ${!count ? "pointer-events-none opacity-50" : ""}`} href="/checkout">Оформить заказ</Link>
         <p className="mt-2 text-center text-meta text-ink-2">Оператор подтвердит наличие и доставку с 8:00 до 20:00</p>

@@ -86,7 +86,7 @@ export function CatalogFilterForm({ action, attrFacets = [], baseParams, brands,
         {cars.map((car) => <option key={car.slug} value={car.slug}>{car.label}</option>)}
       </select>
     </fieldset>
-    <fieldset className="grid min-w-0 gap-2"><legend className="text-body font-bold text-ink">Цена, L.</legend>
+    <fieldset className="grid min-w-0 gap-2"><legend className="text-body font-bold text-ink">Цена, руб.</legend>
       <div className="grid min-w-0 grid-cols-2 gap-2">
         <input aria-label="Цена от" className={field} defaultValue={filters.priceFrom} inputMode="numeric" min={0} name="price_from" placeholder="От" type="number" />
         <input aria-label="Цена до" className={field} defaultValue={filters.priceTo} inputMode="numeric" min={0} name="price_to" placeholder="До" type="number" />

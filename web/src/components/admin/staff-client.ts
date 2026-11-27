@@ -4,7 +4,7 @@ export async function staffCall<T = Record<string, unknown>>(endpoint: string, b
   return (await response.json().catch(() => ({}))) as T;
 }
 
-export const money = (value: number) => `${Number(value ?? 0).toLocaleString("ru-RU")} L.`;
+export const money = (value: number) => `${Number(value ?? 0).toLocaleString("ru-RU")} руб.`;
 
 export const when = (value: string) => new Intl.DateTimeFormat("ru-RU", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
 

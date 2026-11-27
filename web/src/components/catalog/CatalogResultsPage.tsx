@@ -74,8 +74,8 @@ function activeChips(source: SearchParamsRecord): Chip[] {
   return [
     ...values("brand").map((value) => ({ key: "brand", label: value, value })),
     ...values("availability").map((value) => ({ key: "availability", label: value === "in_stock" ? "В наличии" : value, value })),
-    ...values("price_from").map((value) => ({ key: "price_from", label: `от ${value} L.` })),
-    ...values("price_to").map((value) => ({ key: "price_to", label: `до ${value} L.` })),
+    ...values("price_from").map((value) => ({ key: "price_from", label: `от ${value} руб.` })),
+    ...values("price_to").map((value) => ({ key: "price_to", label: `до ${value} руб.` })),
   ];
 }
 
@@ -148,7 +148,7 @@ export async function CatalogResultsPage({ categoryName, categorySlug, homepage,
           <div className="mt-4"><CatalogToolbar activeFilterCount={chips.length + (car ? 1 : 0)} sort={listing.filters.sort} view={listing.filters.view} /></div>
           <MobileCatalogFilterSheet {...formProps} />
           <div className={`mt-4 grid min-w-0 gap-2 md:gap-4 ${listing.filters.view === "list" ? "grid-cols-1" : "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"}`}>{listing.products.map((product, index) => <Fragment key={product.id}><ProductCard carDonorIds={car?.donorIds} product={product} />{index === Math.min(3, listing.products.length - 1) && <AdSlot slot="catalog" />}</Fragment>)}</div>
-          {listing.pageCount > 1 ? <nav aria-label="Страницы каталога" className="mt-6 flex flex-wrap justify-center gap-2">{Array.from({ length: listing.pageCount }, (_, index) => index + 1).map((page) => <Link aria-current={page === listing.filters.page ? "page" : undefined} className={`grid h-10 w-10 place-items-center rounded-ui text-body font-bold ${page === listing.filters.page ? "bg-accent text-white" : "bg-surface-2 text-ink hover:text-accent"}`} href={routeWith(pathname, searchParams, "page", String(page))} key={page}>{page}</Link>)}</nav> : null}
+          {listing.pageCount > 1 ? <nav aria-label="Страницы каталога" className="mt-6 flex flex-wrap justify-center gap-2">{Array.from({ length: listing.pageCount }, (_, index) => index + 1).map((page) => <Link aria-current={page === listing.filters.page ? "page" : undefined} className={`grid h-11 w-11 place-items-center rounded-ui text-body font-bold ${page === listing.filters.page ? "bg-accent text-white" : "bg-surface-2 text-ink hover:text-accent"}`} href={routeWith(pathname, searchParams, "page", String(page))} key={page}>{page}</Link>)}</nav> : null}
         </> : <div className="mt-4 grid gap-4">
           {car ? <p className="text-body text-ink-2">Для {car.label} здесь ничего нет. <Link className="text-accent hover:text-accent-hover" href={resetCar}>Показать для всех машин</Link></p> : null}
           <EmptyCatalogRequest car={car?.label ?? ""} query={listing.filters.query} />

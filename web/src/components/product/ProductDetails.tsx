@@ -25,7 +25,7 @@ export type CardFacts = {
 const noPhoto = "/images/no-photo.png";
 
 function priceText(product: Product) {
-  return product.priceMode === "fixed" && product.priceMdl ? `${product.priceMdl.toLocaleString("ru-RU")} L.` : "Цена по запросу";
+  return product.priceMode === "fixed" && product.priceMdl ? `${product.priceMdl.toLocaleString("ru-RU")} руб.` : "Цена по запросу";
 }
 
 /** «Снято с: Mercedes-Benz E-класс W212 2013 2.2 CDI» — машина целиком, с мотором. */
@@ -65,7 +65,7 @@ export function ProductDetails({ product, car, facts }: { product: Product; car?
       <header className="min-w-0 xl:col-start-2 xl:row-start-1">
         <h1 className="break-words text-block font-bold text-ink xl:text-section">{product.name}</h1>
         <div className="mt-2 flex flex-wrap items-center gap-4">
-          <FavoriteButton className="h-10 w-10 rounded-ui border border-line" id={product.id} name={product.name} />
+          <FavoriteButton className="h-11 w-11 rounded-ui border border-line" id={product.id} name={product.name} />
           {product.reviewCount > 0 && <a href="#reviews" className="text-meta text-ink-2 hover:text-accent">★ {product.rating.toFixed(1)} · отзывов: {product.reviewCount}</a>}
         </div>
       </header>
@@ -126,7 +126,7 @@ export function ProductDetails({ product, car, facts }: { product: Product; car?
             {product.condition && <div><dt>Состояние</dt><dd>{product.condition}</dd></div>}
             {facts?.specs.map((row) => <div data-spec={row.key} key={row.key}><dt>{row.label}</dt><dd>{row.value}</dd></div>)}
             {product.crossNumbers?.length ? <div data-cross><dt>Кросс-номера</dt><dd>{product.crossNumbers.map((item) => `${item.number}${item.source ? ` (${item.source})` : ""}`).join(", ")}</dd></div> : null}
-            {origin && <div data-origin><dt>Снято с</dt><dd>{product.donorId ? <Link className="font-bold text-accent underline hover:text-accent-hover" href={`/donors/${product.donorId}`}>{origin}</Link> : origin}</dd></div>}
+            {origin && <div data-origin><dt>Снято с</dt><dd>{product.donorId ? <Link className="inline-flex min-h-11 items-center font-bold text-accent underline hover:text-accent-hover" href={`/donors/${product.donorId}`}>{origin}</Link> : origin}</dd></div>}
           </dl>
         </section>
 

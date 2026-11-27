@@ -1,10 +1,11 @@
 "use client";
 
-import { ChevronDown, ChevronRight, Menu, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Menu, Phone, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useId, useState } from "react";
 import { categoryBasePath, categoryHref } from "@/data/directions.seed";
 import type { PublicCategory } from "@/lib/reference-db";
+import { languagesLine, messenger, storeHours } from "@/lib/store-info";
 
 /**
  * Меню берёт разделы только из справочника владельца — из того же источника,
@@ -18,9 +19,11 @@ import type { PublicCategory } from "@/lib/reference-db";
 interface CatalogButtonProps {
   mobile?: boolean;
   categories: PublicCategory[];
+  /** Телефон для бургер-меню на мобильном. */
+  phone?: string;
 }
 
-export function CatalogButton({ mobile = false, categories }: CatalogButtonProps) {
+export function CatalogButton({ mobile = false, categories, phone = "" }: CatalogButtonProps) {
   const [isOpen, setOpen] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const panelId = useId();
@@ -45,7 +48,7 @@ export function CatalogButton({ mobile = false, categories }: CatalogButtonProps
   }, []);
 
   const className = mobile
-    ? "grid h-10 w-10 shrink-0 place-items-center rounded-ui text-white hover:bg-white/10"
+    ? "grid h-11 w-11 shrink-0 place-items-center rounded-ui text-white hover:bg-white/10"
     : "flex h-control shrink-0 items-center gap-2 rounded-ui bg-accent px-4 text-btn font-bold text-white hover:bg-accent-hover";
 
   return (
@@ -76,7 +79,17 @@ export function CatalogButton({ mobile = false, categories }: CatalogButtonProps
               })}
             </nav>
             {!mobile && selected && <div id={panelId} className="absolute inset-y-0 left-full w-80 overflow-y-auto border-l border-line bg-surface shadow-card"><h2 className="px-4 py-4 text-block font-bold text-ink">{selected.label}</h2>{subcategories(selected)}</div>}
-            <Link className="border-t border-line px-4 py-4 text-meta font-bold text-ink hover:bg-surface-2" href="/catalog/legkovye" onClick={() => setOpen(false)}>Оригинальные детали Mercedes-Benz</Link>
+            <div className="grid gap-1 border-t border-line p-2" data-burger-service>
+              {phone ? <a className="flex h-11 items-center gap-2 rounded-ui px-2 text-body font-bold text-ink hover:bg-surface-2" href={`tel:${phone.replace(/[^\d+]/g, "")}`}><Phone aria-hidden="true" size={18} />{phone}</a> : null}
+              <div className="grid grid-cols-3 gap-1">
+                {[["Доставка", "/delivery"], ["Оплата", "/payment"], ["Контакты", "/contacts"]].map(([label, href]) => <Link className="flex h-11 items-center justify-center rounded-ui bg-surface-2 text-body text-ink hover:text-accent" href={href} key={href} onClick={() => setOpen(false)}>{label}</Link>)}
+              </div>
+              <div className="grid grid-cols-2 gap-1">
+                <a className="flex h-11 items-center justify-center rounded-ui border border-line text-body font-bold text-ink" href={messenger.viber}>Viber</a>
+                <a className="flex h-11 items-center justify-center rounded-ui border border-line text-body font-bold text-ink" href={messenger.telegram} rel="noreferrer" target="_blank">Telegram</a>
+              </div>
+              <p className="px-2 text-meta text-ink-2">{storeHours.full}. {languagesLine}.</p>
+            </div>
           </section>
         </>
       ) : null}

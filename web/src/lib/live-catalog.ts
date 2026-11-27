@@ -60,7 +60,7 @@ function mapStoreProduct(part: PartRow, rate: number | null, summary?: { average
     image: { alt: part.nameRu, url: cover || placeholder },
     images: part.photos.length ? part.photos.map((photo) => ({ alt: part.nameRu, url: photo.src })) : undefined,
     stock: part.stock,
-    priceRub: part.priceMdl !== null && rate !== null && rate > 0 ? Math.round(part.priceMdl * rate) : undefined,
+    priceRub: undefined,
     condition: conditionLabel(part.condition) || undefined,
     donor: part.donorTitle || undefined,
     donorId: part.donorId ?? undefined,
@@ -90,7 +90,7 @@ export async function getLiveHomepage({ includeInventory = true }: { includeInve
   const live = (product: Product): Product => {
     const row = current.get(product.id);
     const review = summary.get(product.id);
-    const details = row ? { stock: row.stock, priceMdl: row.priceMdl, priceRub: row.priceRub ?? undefined, priceMode: row.priceMode === "on_request" ? "on_request" as const : "fixed" as const } : { stock: 0 };
+    const details = row ? { stock: row.stock, priceMdl: row.priceMdl, priceRub: undefined, priceMode: row.priceMode === "on_request" ? "on_request" as const : "fixed" as const } : { stock: 0 };
     return { ...product, ...details, rating: review?.average ?? 0, reviewCount: review?.count ?? 0 };
   };
   return {

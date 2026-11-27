@@ -10,6 +10,7 @@ import path from "node:path";
 import { encodePartImage } from "@/lib/images";
 import { AttrError, cleanAttrs, cleanCrossNumbers, nameHint, templatesFor, type Attrs, type CrossNumber } from "@/lib/attributes";
 import { categoryPath, listAttrTemplates } from "@/lib/attributes-db";
+import { isDemoTag, notDemo, showDemo } from "@/lib/demo";
 
 type Row = Record<string, string | number | null>;
 
@@ -171,6 +172,8 @@ export type PartRow = {
   photos: Photo[]; returnRestricted: boolean; hidden: boolean; soldAt: string | null; createdAt: string;
   /** П6: характеристики по шаблону, кросс-номера, состояние словами. */
   attrs: Attrs; crossNumbers: CrossNumber[]; conditionNote: string;
+  /** Деталь из демонабора: на витрине видна только при NAA_SHOW_DEMO=1. */
+  demo: boolean;
   /** Тип детали: название и флаги из справочника. «Без возврата» и «расходник» берутся оттуда. */
   partTypeName: string; typeReturnRestricted: boolean; consumable: boolean;
   /** Донор целиком: происхождение детали — марка, модель, кузов, год, мотор. */
@@ -189,6 +192,7 @@ function toPart(row: Row): PartRow {
     includes: String(row.includes ?? ""), applicability: String(row.applicability ?? ""), photos: parsePhotos(row.photos_json),
     returnRestricted: Number(row.return_restricted) === 1, hidden: Number(row.hidden ?? 0) === 1,
     soldAt: (row.sold_at as string | null) ?? null, createdAt: String(row.created_at ?? ""),
+    demo: isDemoTag(row.demo_tag),
     attrs: jsonObject(row.attrs), crossNumbers: jsonArray(row.cross_numbers) as CrossNumber[], conditionNote: String(row.condition_note ?? ""),
     partTypeName: String(row.type_name ?? ""), typeReturnRestricted: Number(row.type_return ?? 0) === 1, consumable: Number(row.type_consumable ?? 0) === 1,
     donor: row.donor_make ? { make: String(row.donor_make), model: String(row.donor_model ?? ""), generation: String(row.donor_generation ?? ""), year: row.donor_year === null || row.donor_year === undefined ? null : Number(row.donor_year), engine: String(row.donor_engine ?? "") } : null,
@@ -397,7 +401,7 @@ return (await transaction(async () => {
   if (!before) throw new Error("Деталь не найдена.");
   (await legacyQuery.run<Row>("UPDATE catalog_products SET price_mdl=?,price_mode='fixed' WHERE id=?", [price, id]));
   (await legacyQuery.run<Row>("UPDATE part_offers SET price_mdl=? WHERE product_id=? AND supplier='own'", [price, id]));
-  (await audit(actor, "Правка цены", `${id}: ${before.price_mdl ?? "по запросу"} → ${price} L.`));
+  (await audit(actor, "Правка цены", `${id}: ${before.price_mdl ?? "по запросу"} → ${price} руб.`));
 
 }));
 }
@@ -420,7 +424,7 @@ export async function locationSuggestions(): Promise<string[]> {
 
 /** Детали, заведённые владельцем: попадают в каталог и на страницу донора. Скрытые не показываются. */
 export async function publicParts(): Promise<PartRow[]> {
-  return (await legacyQuery.all<Row>(`${partSelect} WHERE COALESCE(p.hidden,0)=0 AND p.sku IS NOT NULL ORDER BY COALESCE(p.created_at,'') DESC`, [])).map(toPart);
+  return (await legacyQuery.all<Row>(`${partSelect} WHERE COALESCE(p.hidden,0)=0 AND p.sku IS NOT NULL AND ${notDemo("p")} ORDER BY COALESCE(p.created_at,'') DESC`, [])).map(toPart);
 }
 
 export type PublicDonor = Omit<Donor, "parts"> & { parts: PartRow[] };
@@ -429,11 +433,13 @@ export type PublicDonor = Omit<Donor, "parts"> & { parts: PartRow[] };
 export async function publicDonor(id: string): Promise<PublicDonor | null> {
   const donor = (await donorById(id));
   if (!donor || !donor.visible) return null;
-  return { ...donor, parts: (await partsOfDonor(id)).filter((part) => !part.hidden) };
+  const row = await one<{ demo_tag: string | null }>("SELECT demo_tag FROM donors WHERE id = $1", [id]);
+  if (isDemoTag(row?.demo_tag) && !showDemo()) return null;
+  return { ...donor, parts: (await partsOfDonor(id)).filter((part) => !part.hidden && (showDemo() || !part.demo)) };
 }
 
 export async function publicDonors(): Promise<Donor[]> {
-  return (await legacyQuery.all<Row>(`${donorSelect} WHERE d.visible=1 ORDER BY d.created_at DESC`, [])).map(toDonor);
+  return (await legacyQuery.all<Row>(`${donorSelect} WHERE d.visible=1 AND ${notDemo("d")} ORDER BY d.created_at DESC`, [])).map(toDonor);
 }
 
 export async function offersOfPart(productId: string) {

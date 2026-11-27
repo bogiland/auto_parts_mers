@@ -77,7 +77,7 @@ export function ReturnsBoard({ rows, candidates }: { rows: ReturnRow[]; candidat
           {blocked.length > 0 && <p className="admin-warning admin-field-wide">В этом заказе есть агрегаты без возврата: {blocked.map((item) => item.name).join(", ")}. Их принять обратно нельзя.</p>}
           <label className="admin-field admin-field-wide">Что показал осмотр<textarea onChange={(event) => setInspection(event.target.value)} placeholder="Метки на месте, следов установки нет…" rows={3} value={inspection} /></label>
           <label className="admin-field">Решение<select onChange={(event) => { setDecision(event.target.value); if (event.target.value === "refused") setAmount("0"); }} value={decision}>{decisions.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
-          <label className="admin-field">Сумма возврата, L.<input disabled={decision === "refused"} max={chosen ? chosen.unitPriceMdl * chosen.quantity : undefined} min="0" onChange={(event) => setAmount(event.target.value)} type="number" value={amount} /></label>
+          <label className="admin-field">Сумма возврата, руб.<input disabled={decision === "refused"} max={chosen ? chosen.unitPriceMdl * chosen.quantity : undefined} min="0" onChange={(event) => setAmount(event.target.value)} type="number" value={amount} /></label>
           <label className="admin-field admin-field-wide">Причина решения<textarea onChange={(event) => setReason(event.target.value)} rows={2} value={reason} /></label>
         </div>
         <ImagePicker label="Фото при осмотре" onChange={(next) => { const src = next.part; if (src) setPhotos([...photos, src]); }} presets={["part"]} value={{}} />

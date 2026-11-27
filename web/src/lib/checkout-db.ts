@@ -3,6 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import settingsDefaults from "../../config/checkout-settings.json";
+import { messenger, storeHours } from "@/lib/store-info";
 import { homepageSeed } from "@/data/homepage.seed";
 import { inTx, many, one, run, txBound } from "@/lib/db";
 import { clientDiscount, discountedPrice } from "@/lib/client-pricing";
@@ -10,7 +11,9 @@ import { clientDiscount, discountedPrice } from "@/lib/client-pricing";
 type Settings = Omit<typeof settingsDefaults, "rubPerMdl"> & { rubPerMdl: number | null };
 export type CheckoutSettings = Settings;
 export type OrderLine = { id: string; name: string; quantity: number; unitPriceMdl: number; unitPriceRub: number | null };
-export type OrderResult = { number: number; token: string; items: OrderLine[]; totalMdl: number; totalRub: number | null; deliveryTitle: string; paymentTitle: string; operatorMessage: string; viberUrl: string | null; telegramUrl: string | null; status: string };
+export type OrderResult = { number: number; token: string; items: OrderLine[]; totalMdl: number; totalRub: number | null; deliveryTitle: string; paymentTitle: string; operatorMessage: string; viberUrl: string | null; telegramUrl: string | null; status: string;
+  /** П8: самовывоз или доставка, адрес склада и телефон — для экрана «Заказ получен» и статуса. */
+  pickup: boolean; pickupAddress: string; phone: string };
 /** Кто оформляет заказ: вошедший покупатель или гостевая сессия браузера.
  *  Ключ идемпотентности действует только внутри своей области. */
 export type OrderOwner = { customerId: number | null; guestId: string };
@@ -61,7 +64,7 @@ export async function getSettings(): Promise<CheckoutSettings> {
   } as CheckoutSettings;
   return {
     ...settings,
-    deliveryMethods: settings.deliveryMethods.map((method) => (method.id === "pickup" ? { ...method, description: `${settings.pickupAddress}, ${settings.pickupHours}` } : method)),
+    deliveryMethods: settingsDefaults.deliveryMethods.map((method) => (method.id === "pickup" ? { ...method, description: `${settings.pickupAddress} · склад ${storeHours.warehouse}` } : method)),
   };
 }
 
@@ -74,7 +77,8 @@ export async function getCheckoutCatalog(options: { ids?: string[]; rate?: numbe
     id: String(row.id),
     name: String(row.name),
     priceMdl: row.price_mdl === null ? null : Number(row.price_mdl),
-    priceRub: row.price_rub !== null ? Number(row.price_rub) : rate !== null && rate > 0 && row.price_mdl !== null ? Math.round(Number(row.price_mdl) * rate) : null,
+    // Цена уже в рублях ПМР (П8): отдельный пересчёт не нужен.
+    priceRub: null,
     stock: Number(row.stock),
     priceMode: String(row.price_mode),
     returnRestricted: Boolean(Number(row.return_restricted)),
@@ -104,8 +108,7 @@ function messengerUrl(base: string, number: number) {
 function contactUrl(settings: Settings, service: "viber" | "telegram", orderNumber: number) {
   const configured = settings.messengers[service];
   if (configured) return messengerUrl(configured, orderNumber);
-  const phone = settings.phones.pmr.replace(/\D/g, "");
-  if (!phone) return null;
+  const phone = messenger.phone.replace(/\D/g, "");
   const text = `Заказ №${orderNumber}`;
   if (service === "telegram") return `https://t.me/+${phone}?text=${encodeURIComponent(text)}`;
   return `viber://chat?number=${encodeURIComponent(`+${phone}`)}`;
@@ -129,13 +132,17 @@ async function buildOrder(row: Record<string, unknown> | null, settings: Setting
     token: String(row.token),
     items,
     totalMdl: Number(row.total_mdl),
-    totalRub: row.total_rub === null ? null : Number(row.total_rub),
+    // Цены и суммы уже в рублях ПМР — старая «вторая валюта» не показывается.
+    totalRub: null,
     deliveryTitle: String(row.delivery_title),
     paymentTitle: String(row.payment_title),
     operatorMessage: message(settings, String(row.created_at)),
     viberUrl: contactUrl(settings, "viber", number),
     telegramUrl: contactUrl(settings, "telegram", number),
     status: String(row.status),
+    pickup: String(row.delivery_method ?? "") === "pickup" || String(row.delivery_title).toLowerCase().includes("самовывоз"),
+    pickupAddress: settings.pickupAddress,
+    phone: settings.phones.pmr || settings.phones.moldova,
   };
 }
 

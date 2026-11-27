@@ -1,10 +1,11 @@
+import {notDemo} from '@/lib/demo';
 import 'server-only';
 import {one,many,run,transaction} from '@/lib/db';
 import {audit,type Staff} from '@/lib/staff-db';
 import {saveImage} from '@/lib/reference-db';
 import {parsePhoneNumberFromString} from 'libphonenumber-js';
 export type Vacancy={id:number;title:string;description:string;schedule:string;location:string;image:string;is_open:boolean};
-export async function vacancies(openOnly=true){return many<Vacancy>(`SELECT * FROM vacancies ${openOnly?'WHERE is_open':''} ORDER BY id DESC`);}
+export async function vacancies(openOnly=true){return many<Vacancy>(`SELECT * FROM vacancies ${openOnly?`WHERE is_open AND ${notDemo()}`:''} ORDER BY id DESC`);}
 export async function vacancy(id:number){return one<Vacancy>('SELECT * FROM vacancies WHERE id=$1 AND is_open',[id]);}
 const field=(v:unknown,n:number)=>typeof v==='string'?v.trim().slice(0,n):'';
 export async function saveVacancy(actor:Staff,data:Record<string,unknown>){if(actor.role!=='owner')throw new Error('Доступно только владельцу.');const title=field(data.title,120),description=field(data.description,10000),schedule=field(data.schedule,120),location=field(data.location,160);if(title.length<2||description.length<10)throw new Error('Заполните название и описание.');const image=await saveImage(field(data.image,5000000));const id=Number(data.id);if(id){if(!await run('UPDATE vacancies SET title=$2,description=$3,schedule=$4,location=$5,image=$6,is_open=$7 WHERE id=$1',[id,title,description,schedule,location,image,data.is_open===true]))throw new Error('Вакансия не найдена.');}else await run('INSERT INTO vacancies(title,description,schedule,location,image,is_open) VALUES($1,$2,$3,$4,$5,$6)',[title,description,schedule,location,image,data.is_open===true]);await audit(actor,'Вакансия сохранена',title);}

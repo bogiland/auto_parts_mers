@@ -154,7 +154,7 @@ export function OrderCard({ id, statusLabels, deliveryMethods, paymentMethods, v
           {paymentMethods.map((option) => <button className={option.id === order.paymentMethod ? "is-active" : ""} disabled={busy} key={option.id} onClick={async () => void (await run({ action: "payment-method", method: option.id }, "Способ оплаты изменён"))} type="button">{option.title}</button>)}
         </div>
         <div className="admin-form-grid">
-          <label className="admin-field">Стоимость доставки, L.<input min="0" onChange={(event) => setDeliveryCost(event.target.value)} type="number" value={deliveryCost} /></label>
+          <label className="admin-field">Стоимость доставки, руб.<input min="0" onChange={(event) => setDeliveryCost(event.target.value)} type="number" value={deliveryCost} /></label>
           <div className="admin-field"><span>Итого</span><strong>{money(total)}</strong>{order.totalRub !== null && <small className="admin-muted">товары ≈ {order.totalRub.toLocaleString("ru-RU")} руб</small>}</div>
         </div>
         {!order.deliveryCostAgreed && <p className="admin-warning">Стоимость доставки ещё не согласована. Сохраните 0, если доставка бесплатна или это самовывоз.</p>}

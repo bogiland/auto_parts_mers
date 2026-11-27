@@ -60,12 +60,12 @@ export function HomeCarousel({ children, label, autoplay = false }: { children: 
             </div>
           ))}
         </div>
-        <button aria-label="Предыдущий слайд" className="absolute -left-4 top-1/2 hidden h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-white text-ink shadow-card xl:grid" onClick={() => move(-1)} type="button"><ChevronLeft size={20} /></button>
-        <button aria-label="Следующий слайд" className="absolute -right-4 top-1/2 hidden h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-white text-ink shadow-card xl:grid" onClick={() => move(1)} type="button"><ChevronRight size={20} /></button>
+        <button aria-label="Предыдущий слайд" className="absolute -left-4 top-1/2 hidden h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-white text-ink shadow-card xl:grid" onClick={() => move(-1)} type="button"><ChevronLeft size={20} /></button>
+        <button aria-label="Следующий слайд" className="absolute -right-4 top-1/2 hidden h-11 w-11 -translate-y-1/2 place-items-center rounded-full bg-white text-ink shadow-card xl:grid" onClick={() => move(1)} type="button"><ChevronRight size={20} /></button>
       </div>
-      <div className="mt-2 flex items-center justify-center gap-2">
-        {children.map((_, index) => <button aria-label={`Слайд ${index + 1}`} aria-pressed={index === slide.index} className="grid h-4 w-4 place-items-center rounded-full" key={index} onClick={() => move(index - slide.index)} type="button"><span className={`h-2 w-2 rounded-full ${index === slide.index ? "bg-accent" : "bg-line"}`} /></button>)}
-        {autoplay && <button aria-label={paused ? "Продолжить показ баннеров" : "Остановить показ баннеров"} className="grid h-6 w-6 place-items-center rounded-ui text-ink-2 hover:text-accent motion-reduce:hidden" onClick={() => setPaused(!paused)} type="button">{paused ? <Play size={14} /> : <Pause size={14} />}</button>}
+      <div className="mt-1 flex items-center justify-center">
+        {children.map((_, index) => <button aria-label={`Слайд ${index + 1}`} aria-pressed={index === slide.index} className="grid h-11 w-11 place-items-center rounded-full" key={index} onClick={() => move(index - slide.index)} type="button"><span className={`h-2 w-2 rounded-full ${index === slide.index ? "bg-accent" : "bg-line"}`} /></button>)}
+        {autoplay && <button aria-label={paused ? "Продолжить показ баннеров" : "Остановить показ баннеров"} className="grid h-11 w-11 place-items-center rounded-ui text-ink-2 hover:text-accent motion-reduce:hidden" onClick={() => setPaused(!paused)} type="button">{paused ? <Play size={14} /> : <Pause size={14} />}</button>}
       </div>
     </div>
   );

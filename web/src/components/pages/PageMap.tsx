@@ -16,6 +16,6 @@ export function PageMap({ address }: { address: string }) {
           <iframe className="block h-64 w-full" src={`https://www.openstreetmap.org/export/embed.html?bbox=29.65%2C46.70%2C29.75%2C46.76&layer=mapnik`} title={`Карта: ${address}`} />
         </div>
       : <button className="mt-3 inline-flex h-btn w-full items-center justify-center rounded-ui border border-line px-4 text-btn font-bold text-ink hover:border-accent hover:text-accent" onClick={() => setShown(true)} type="button">Показать карту</button>}
-    <a className="mt-2 inline-block text-meta text-ink-2 hover:text-accent" href={external} rel="noreferrer" target="_blank">Открыть в OpenStreetMap</a>
+    <a className="mt-2 inline-flex min-h-11 items-center text-meta text-ink-2 hover:text-accent" href={external} rel="noreferrer" target="_blank">Открыть в OpenStreetMap</a>
   </div>;
 }

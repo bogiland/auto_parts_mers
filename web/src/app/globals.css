@@ -58,7 +58,7 @@
   --shadow-card: 0 2px 8px 0 rgb(0 0 0 / 0.12);
   --shadow-card-hover: 0 2px 16px 0 rgb(0 0 0 / 0.12);
   --spacing-control: 48px;
-  --spacing-btn: 40px;
+  --spacing-btn: 44px; /* П9: кнопка — не меньше 44 px по зоне нажатия */
   --spacing-tabbar: 66px;
 }
 
@@ -344,4 +344,26 @@ button { cursor: pointer; }
 
 @layer utilities {
   .support-launcher { bottom: calc(var(--spacing-tabbar) + var(--spacing) * 4 + env(safe-area-inset-bottom)); }
+}
+
+/* Оформление заказа: радиокнопки и галочки не меньше 24 px — по ним попадают пальцем на телефоне. */
+.checkout-form input[type="radio"],
+.checkout-form input[type="checkbox"] {
+  width: calc(var(--spacing) * 6);
+  height: calc(var(--spacing) * 6);
+  accent-color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+/* Зоны нажатия на телефоне не меньше 44 px (П9). Мелкие ссылки в строках подписи и хлебных крошках
+   получают невидимый отступ сверху и снизу: зона нажатия растёт, а строка не раздвигается. */
+@layer base {
+  .text-meta a,
+  a.text-meta,
+  nav[aria-label="Хлебные крошки"] a {
+    display: inline-block;
+    padding: calc(var(--spacing) * 4) calc(var(--spacing) * 1);
+    margin: calc(var(--spacing) * -4) calc(var(--spacing) * -1);
+  }
+  .header-mobile-nav a { display: inline-flex; align-items: center; min-height: calc(var(--spacing) * 11); }
 }

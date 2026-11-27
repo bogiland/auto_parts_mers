@@ -77,7 +77,7 @@ export async function offer(actor:Staff,caseId:number,ids:string[]) {return tran
  const customer=await one<{phone:string}>('SELECT c.phone FROM crm_cases k JOIN crm_clients c ON c.id=k.client_id WHERE k.id=$1',[caseId]);if(!customer)throw new Error('Обращение не найдено.');
  const discount=await clientDiscount(customer.phone);for(const item of items)if(item.price_mdl!==null)item.price_mdl=discountedPrice(item.price_mdl,discount);
  const settings=await getSettings(),origin=(process.env.NEXT_PUBLIC_SITE_URL??'http://localhost:3000').replace(/\/$/,'');
- const text='NAA.md — предложение:\n'+items.map(p=>`${p.name}: ${p.price_mdl===null?'по запросу':`${p.price_mdl} MDL${settings.rubPerMdl?` / ${Math.round(p.price_mdl*settings.rubPerMdl)} руб. ПМР`:''}`} · остаток ${p.stock}\n${origin}/products/${p.id}`).join('\n\n');
+ const text='NAA.md — предложение:\n'+items.map(p=>`${p.name}: ${p.price_mdl===null?'по запросу':`${p.price_mdl} руб.`} · остаток ${p.stock}\n${origin}/products/${p.id}`).join('\n\n');
  const updated=await run("UPDATE crm_cases SET stage='offered',version=version+1,updated_at=now() WHERE id=$1",[caseId]);if(!updated)throw new Error('Обращение не найдено.');await event(actor,caseId,'Предложение подготовлено',text);return text;
 });}
 export async function waitForPart(actor:Staff,input:Record<string,unknown>){const query=string(input.query,200);if(query.length<2)throw new Error('Укажите название ожидаемой детали.');const caseId=idOf(input.caseId);await run('INSERT INTO crm_waits(case_id,query,category_id,donor_id) VALUES($1,$2,$3,$4)',[caseId,query,string(input.categoryId,100)||null,string(input.donorId,100)||null]);await event(actor,caseId,'Ожидание поступления',query);}

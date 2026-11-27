@@ -314,7 +314,7 @@ export async function listCosts() {
 export async function setCost(actor: Staff, id: string, cost: number) {
   if (!Number.isSafeInteger(cost) || cost < 0) throw new Error("Неверная себестоимость.");
   if (!(await run("UPDATE catalog_products SET cost_mdl = $1 WHERE id = $2", [cost, id]))) throw new Error("Товар не найден.");
-  await audit(actor, "Правка себестоимости", `${id}: ${cost} L.`);
+  await audit(actor, "Правка себестоимости", `${id}: ${cost} руб.`);
 }
 
 export async function updateSettings(actor: Staff, input: Record<string, unknown>) {
@@ -322,7 +322,18 @@ export async function updateSettings(actor: Staff, input: Record<string, unknown
   const address = input.pickupAddress;
   const pickupHours = input.pickupHours;
   const operatorHours = input.operatorHours;
-  const rate = input.rubPerMdl === "" ? null : Number(input.rubPerMdl);
+  // Курсы: сколько рублей ПМР за 1 USD, EUR и MDL. Покупатель их не видит — USD и EUR нужны
+  // для ввода цены в админке, MDL — для румынской версии. Дата обновления ставится при изменении.
+  const currentRates = (current as { rates?: { usd?: number; eur?: number; mdl?: number; updatedAt?: string } }).rates ?? {};
+  const rateOf = (value: unknown, fallback: number | undefined) => {
+    if (value === undefined || value === "") return fallback;
+    const number = Number(String(value).replace(",", "."));
+    if (!Number.isFinite(number) || number <= 0 || number > 10_000) throw new Error("Проверьте курсы: положительное число, например 16,50.");
+    return Math.round(number * 10_000) / 10_000;
+  };
+  const rates = { usd: rateOf(input.rateUsd, currentRates.usd), eur: rateOf(input.rateEur, currentRates.eur), mdl: rateOf(input.rateMdl, currentRates.mdl) };
+  const ratesChanged = rates.usd !== currentRates.usd || rates.eur !== currentRates.eur || rates.mdl !== currentRates.mdl;
+  const rate = null;
   // Срок возврата б/у детали в днях: на карточке «Возврат N дня». Пусто — оставить прежний.
   const returnDays = input.returnDays === undefined || input.returnDays === "" ? current.returnDays : Number(input.returnDays);
   if (!Number.isInteger(returnDays) || returnDays < 0 || returnDays > 60) throw new Error("Срок возврата — от 0 до 60 дней.");
@@ -348,6 +359,7 @@ export async function updateSettings(actor: Staff, input: Record<string, unknown
     operatorStartHour: Number(operatorHours.slice(0, 2)),
     operatorEndHour: Number(operatorHours.split("-")[1]?.slice(0, 2)),
     rubPerMdl: rate,
+    rates: { ...rates, updatedAt: ratesChanged ? new Date().toISOString() : currentRates.updatedAt ?? "" },
     returnDays,
     phones: { pmr: normalizePhone(phonePmr), moldova: normalizePhone(phoneMoldova) },
     messengers: { viber, telegram }, socials, receipt,
@@ -366,7 +378,7 @@ export async function setInventory(actor: Staff, id: string, price: number, stoc
     await run("UPDATE catalog_products SET category_id = $1 WHERE id = $2", [categoryId, id]);
     await audit(actor, "Смена категории детали", `${id}: ${before.category_id ?? "без категории"} → ${categoryId ?? "без категории"}`);
   }
-  if (Number(before.price_mdl) !== price) await audit(actor, "Правка цены", `${id}: ${before.price_mdl} → ${price} L.`);
+  if (Number(before.price_mdl) !== price) await audit(actor, "Правка цены", `${id}: ${before.price_mdl} → ${price} руб.`);
   if (Number(before.stock) !== stock) await audit(actor, "Правка остатка", `${id}: ${before.stock} → ${stock}`);
 }
 

@@ -508,3 +508,19 @@ CREATE TABLE IF NOT EXISTS ref_related_categories (
   sort_order integer NOT NULL DEFAULT 0,
   PRIMARY KEY (category_id, related_id)
 );
+
+/* ---------- П8: рубль ПМР — основная и единственная валюта ---------- */
+
+-- Журнал однократного перевода цен из леев в рубли ПМР: старая сумма, курс, новая сумма.
+-- Колонки *_mdl после перевода хранят рубли ПМР (имена оставлены, чтобы не ломать старые записи и выгрузки).
+CREATE TABLE IF NOT EXISTS currency_migration_log (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  table_name text NOT NULL,
+  row_id text NOT NULL,
+  column_name text NOT NULL,
+  old_value integer NOT NULL,
+  rate numeric(12,6) NOT NULL,
+  new_value integer NOT NULL,
+  migrated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (table_name, row_id, column_name)
+);

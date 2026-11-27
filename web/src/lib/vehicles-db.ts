@@ -2,6 +2,7 @@ import "server-only";
 
 import { many } from "@/lib/db";
 import { ensureSeeded } from "@/lib/checkout-db";
+import { notDemo } from "@/lib/demo";
 
 /**
  * Единый справочник машин для витрины.
@@ -55,7 +56,7 @@ export async function showroomVehicles(): Promise<ShowroomMake[]> {
            COUNT(p.id) FILTER (WHERE p.stock > 0) AS in_stock
     FROM donors d
     JOIN catalog_products p ON p.donor_id = d.id AND p.hidden = 0
-    WHERE d.visible = 1
+    WHERE d.visible = 1 AND ${notDemo("d")} AND ${notDemo("p")}
     GROUP BY d.id, d.make, d.model, d.generation
     HAVING COUNT(p.id) > 0
     ORDER BY d.make, d.model, d.generation`));

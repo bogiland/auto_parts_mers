@@ -66,7 +66,7 @@ export function CategoryTabs({ own = [] }: { own?: OwnCategoryGroup[] }) {
           </Link>
         ))}
       </div>
-      <div className="mt-4 text-center"><Link className="text-body text-ink underline hover:text-accent" href="/catalog/legkovye">Перейти в каталог</Link></div>
+      <div className="mt-4 text-center"><Link className="inline-flex min-h-11 items-center text-body text-ink underline hover:text-accent" href="/catalog/legkovye">Перейти в каталог</Link></div>
     </section>
   );
 }

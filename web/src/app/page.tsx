@@ -1,41 +1,49 @@
-import Image from "next/image";
+import Link from "next/link";
+
 import { SiteHeader } from "@/components/header/SiteHeader";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { ExpertMatchTabs } from "@/components/home/ExpertMatchTabs";
 import { HeroSlider } from "@/components/home/HeroSlider";
 import { CategoryTabs } from "@/components/home/CategoryTabs";
+import { HomeCarPicker } from "@/components/home/HomeCarPicker";
 import { ProductRail } from "@/components/product/ProductRail";
-import { MostViewedSection } from "@/components/catalog/most-viewed-section";
-import { WeeklyProducts } from "@/components/home/WeeklyProducts";
 import { SectionHeader } from "@/components/ui/section-header";
 import { getLiveHomepage, ownCategoryGroups } from "@/lib/live-catalog";
-import { HomeCarPicker } from "@/components/home/HomeCarPicker";
 import { showroomVehicles } from "@/lib/vehicles-db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/**
+ * Главная (П9). Раньше «Товар недели», «Популярные» и «Самые просматриваемые» показывали
+ * одни и те же 8 товаров, а «Популярные бренды» — логотипы Stellox и Areol, которых нет на складе.
+ * Теперь два блока с разным содержимым — свежие поступления со склада и новые расходники —
+ * и марки машин на разборке со ссылками на их детали.
+ */
 export default async function HomePage() {
   // Блок категорий строится из того же справочника, что меню и фильтры каталога.
-  const [homepage, makes, ownGroups] = await Promise.all([getLiveHomepage({ includeInventory: false }), showroomVehicles(), ownCategoryGroups()]);
+  const [homepage, makes, ownGroups] = await Promise.all([getLiveHomepage(), showroomVehicles(), ownCategoryGroups()]);
   // Подбор строится от того же справочника машин, что меню и каталог.
   const pickerMakes = makes.map((make) => ({ slug: make.slug, name: make.name, inStock: make.inStock, models: make.models.map((model) => ({ slug: model.slug, name: model.name, inStock: model.inStock, generations: model.generations.map(({ slug, name, inStock }) => ({ slug, name, inStock })) })) }));
-  const order = ["air-filter-om654", "battery-agm", "brake-kit", "cabin-filter", "disc-w205", "filter-om654", "plugs-m274", "oil-5w30"];
-  const ordered = order.flatMap(id => { const product = homepage.popularProducts.find(item => item.id === id); return product ? [product] : []; });
+  // Свежие поступления — б/у детали со склада, новые первыми. Расходники — новые детали. Пересечений нет.
+  const fresh = (homepage.liveProducts ?? []).filter((product) => (product.stock ?? 0) > 0 && product.conditionId !== "new").slice(0, 12);
+  const consumables = (homepage.liveProducts ?? []).filter((product) => (product.stock ?? 0) > 0 && product.conditionId === "new").slice(0, 12);
   return <>
     <SiteHeader hours={homepage.hours} phone={homepage.phone} />
     <main className="container-site section-stack">
-      {/* Подбор по машине — первым экраном, рядом с поиском по номеру, а не во второй вкладке под «Сомневаетесь…». */}
+      {/* Подбор по машине — первым экраном, рядом с поиском по номеру. */}
       <HomeCarPicker makes={pickerMakes} />
-      <section className="grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-3">
-        <div className="min-w-0 xl:col-span-2"><HeroSlider slides={homepage.heroSlides.filter(slide => slide.isEnabled)} /></div>
-        <WeeklyProducts products={ordered} />
-      </section>
+      <HeroSlider slides={homepage.heroSlides} />
+      {fresh.length ? <section className="min-w-0" data-home-fresh><SectionHeader href="/catalog/legkovye/all" linkText="Все запчасти" title="Новые поступления на склад" /><ProductRail products={fresh} /></section> : null}
       <ExpertMatchTabs />
       <CategoryTabs own={ownGroups} />
-      <section className="min-w-0"><SectionHeader href="/catalog/legkovye" linkText="Смотреть все товары" title="Популярные товары" /><ProductRail products={[...ordered, ...homepage.popularProducts.filter(product => !order.includes(product.id))]} /></section>
-      <MostViewedSection products={ordered} />
-      <section className="min-w-0"><SectionHeader title="Популярные бренды" /><div className="grid min-w-0 grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">{["stellox", "areol", "furo", "chemipro", "comma", "zent-parts", "edcon", "wezer", "brix", "sk-zic"].map(brand => <div className="relative aspect-[3/1] min-w-0 overflow-hidden rounded-ui bg-surface-2" key={brand}><Image alt={brand} className="object-contain" fill sizes="(min-width: 1200px) 20vw, 40vw" src={`/images/brands/${brand}.png`} /></div>)}</div></section>
+      {consumables.length ? <section className="min-w-0" data-home-consumables><SectionHeader href="/catalog/legkovye/demo-filters" linkText="Фильтры и расходники" title="Новые расходники" /><ProductRail products={consumables} /></section> : null}
+      {makes.length ? <section className="min-w-0" data-home-makes>
+        <SectionHeader href="/catalog/legkovye/brands" linkText="Все марки" title="Машины на разборке" />
+        <div className="grid min-w-0 grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5">
+          {makes.map((make) => <Link className="flex min-h-11 flex-col justify-center rounded-ui bg-surface-2 p-3 text-body font-bold text-ink hover:text-accent" href={`/catalog/legkovye/${make.slug}`} key={make.slug}>{make.name}<span className="text-meta font-normal text-ink-2">{make.inStock} в наличии</span></Link>)}
+        </div>
+      </section> : null}
     </main>
     <SiteFooter />
   </>;

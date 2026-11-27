@@ -9,6 +9,7 @@ import { getHomepage } from "@/lib/catalog-gateway";
 import { getLiveHomepage } from "@/lib/live-catalog";
 import { listBrands, publicCategories } from "@/lib/reference-db";
 import { showroomVehicles } from "@/lib/vehicles-db";
+import { listAttrTemplates } from "@/lib/attributes-db";
 import { categorySlugFromPath, type SearchParamsRecord } from "@/lib/catalog-listing";
 
 type CatalogDirectionPageProps = {
@@ -38,8 +39,10 @@ export default async function CatalogDirectionPage({ params, searchParams }: Cat
       image: { alt: child.name, url: child.image }, isVisible: true,
     })) ?? [];
     // Машины и бренды деталей — из общего справочника, одного для меню, каталога и подбора.
-    const [makes, partBrands] = await Promise.all([showroomVehicles(), listBrands()]);
-    return <><SiteHeader hours={homepage.hours} phone={homepage.phone} /><DirectionHome direction={direction} homepage={homepage} makes={makes} ownCategories={ownCategories} partBrands={partBrands.map(({ id, name }) => ({ id, name }))} /><SiteFooter /></>;
+    const [makes, partBrands, templates] = await Promise.all([showroomVehicles(), listBrands(), listAttrTemplates()]);
+    // Автохимия подбирается по вязкости и допуску — варианты из шаблона характеристик масел.
+    const chemistry = { viscosities: templates.find((t) => t.key === "viscosity")?.options ?? [], approvals: templates.find((t) => t.key === "mb_approval")?.options ?? [] };
+    return <><SiteHeader hours={homepage.hours} phone={homepage.phone} /><DirectionHome chemistry={chemistry} direction={direction} homepage={homepage} makes={makes} ownCategories={ownCategories} partBrands={partBrands.map(({ id, name }) => ({ id, name }))} /><SiteFooter /></>;
   }
 
   // Адрес старого вида /catalog/<раздел>: раздел живёт внутри легковых. Перенаправляем

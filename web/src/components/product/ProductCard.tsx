@@ -2,7 +2,6 @@
 
 import { CartControl } from "@/components/cart/CartControl";
 import { FavoriteButton } from "@/components/favorites/FavoriteButton";
-import { useCurrency } from "@/components/header/CurrencySwitch";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -18,18 +17,17 @@ type ProductCardProps = {
 };
 
 function priceLabel(product: Product) {
-  return product.priceMode === "fixed" && product.priceMdl ? `${product.priceMdl.toLocaleString("ru-RU")} L.` : "Цена по запросу";
+  return product.priceMode === "fixed" && product.priceMdl ? `${product.priceMdl.toLocaleString("ru-RU")} руб.` : "Цена по запросу";
 }
 
 function oldPriceLabel(product: Product, discount: boolean) {
   return discount && product.priceMode === "fixed" && product.priceMdl
-    ? `${Math.round(product.priceMdl / 0.7).toLocaleString("ru-RU")} L.`
+    ? `${Math.round(product.priceMdl / 0.7).toLocaleString("ru-RU")} руб.`
     : null;
 }
 
 export function ProductCard({ carDonorIds, className = "", discount = false, product }: ProductCardProps) {
   const compatibility = compatibilityNote(product, carDonorIds);
-  const currency = useCurrency();
   const oldPrice = oldPriceLabel(product, discount);
   const isFixedPrice = product.priceMode === "fixed" && product.priceMdl;
   const images = product.images?.length ? product.images : [product.image];
@@ -41,15 +39,14 @@ export function ProductCard({ carDonorIds, className = "", discount = false, pro
         <Link aria-label={product.name} className="absolute inset-0" href={`/products/${product.id}`}>
           <Image alt={image.alt} className="object-contain" fill sizes="(min-width: 1200px) 16.666vw, (min-width: 768px) 33.333vw, 50vw" src={image.url} />
         </Link>
-        <FavoriteButton className="absolute right-0 top-0 h-6 w-6" id={product.id} name={product.name} />
+        <FavoriteButton className="absolute -right-2 -top-2 h-11 w-11" id={product.id} name={product.name} />
         {discount ? <span className="absolute bottom-0 left-0 rounded-badge bg-accent px-1.5 text-badge font-bold text-white">-9%</span> : null}
         {images.length > 1 ? <div aria-label={`Фотография 1 из ${images.length}`} className="absolute bottom-0 left-1/2 flex -translate-x-1/2 gap-1"><span className="h-1 w-1 rounded-full bg-accent" />{images.slice(1).map((entry) => <span className="h-1 w-1 rounded-full bg-line" key={entry.url} />)}</div> : null}
       </div>
-      <p className={`mt-2 whitespace-nowrap text-price font-bold ${discount && isFixedPrice ? "text-accent" : "text-ink"}`}>{currency === "rub" && product.priceRub !== undefined && product.priceMode === "fixed" ? `≈ ${product.priceRub.toLocaleString("ru-RU")} руб. ПМР` : priceLabel(product)}{oldPrice && currency === "mdl" ? <span className="ml-2 text-meta font-normal text-ink-3 line-through">{oldPrice}</span> : null}</p>
-      {product.priceRub !== undefined && product.priceMode === "fixed" && <p className="text-meta text-ink-2">{currency === "rub" ? priceLabel(product) : `≈ ${product.priceRub.toLocaleString("ru-RU")} руб. ПМР`}</p>}
+      <p className={`mt-2 whitespace-nowrap text-price font-bold ${discount && isFixedPrice ? "text-accent" : "text-ink"}`}>{priceLabel(product)}{oldPrice ? <span className="ml-2 text-meta font-normal text-ink-3 line-through">{oldPrice}</span> : null}</p>
       {/* Бренд — производитель, донор — машина, с которой снята деталь. У разных экземпляров
           с одним номером детали донор и есть то, чем предложения отличаются друг от друга. */}
-      <p className="mt-1 truncate text-meta text-ink-2">{[product.brand, product.sku].filter(Boolean).join(" · ")}</p>
+      <p className="mt-1 break-words text-meta text-ink-2" data-card-sku>{[product.brand, product.sku].filter(Boolean).join(" · ")}</p>
       {product.donor ? <p className="truncate text-meta text-ink-2">С машины: {product.donor}</p> : null}
       {compatibility ? <p className={`text-meta ${compatibility.startsWith("Снята") ? "text-success" : "text-ink-2"}`}>{compatibility}</p> : null}
       <h3 className="mt-1 line-clamp-2 min-h-10 text-nav font-bold text-ink">{product.name}</h3>

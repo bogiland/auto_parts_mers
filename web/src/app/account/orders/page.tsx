@@ -11,7 +11,7 @@ const statusLabels: Record<string, string> = {
   received: "Новый", confirmed: "Подтверждён", ready: "Готов к выдаче", shipped: "Отправлен",
   issued: "Выдан", cancelled: "Отменён", returned: "Возврат",
 };
-const money = (value: number) => `${value.toLocaleString("ru-RU")} L.`;
+const money = (value: number) => `${value.toLocaleString("ru-RU")} руб.`;
 
 export default async function AccountOrdersPage() {
   const customer = await requireCustomer();
